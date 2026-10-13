@@ -161,6 +161,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 showUngrouped: settings.showUngrouped,
                 showCreateGroup: settings.showCreateGroup,
                 verticalAlignment: settings.sidebarVerticalAlignment,
+                sidebarWidth: CGFloat(settings.sidebarWidth),
                 position: settings.sidebarPosition,
                 itemDisplayMode: settings.sidebarItemDisplayMode,
                 language: settings.language

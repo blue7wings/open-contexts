@@ -98,6 +98,7 @@ xattr -dr com.apple.quarantine "/Applications/OpenContexts.app"
 - Group visibility: Hide Ungrouped and its windows or the New Group button in settings. Ungrouped hides automatically when empty; custom empty groups remain. Hiding does not delete groups or windows.
 - Menu bar settings: Place the sidebar on the left, right, or bottom, and choose always visible, show on hover, or off. Left and right sidebars support top, center, and bottom alignment. The keyboard switcher stays available while the sidebar is off; reopen settings from the menu bar to enable it. Settings persist across restarts.
 - Display options: Show app icons only, or icons and window titles. If the bottom bar runs out of space, it shrinks window items evenly so all windows stay on one line without scrolling.
+- Sidebar width: Drag the slider in settings to resize left and right sidebars with titles from 94 to 376 points (default: 188). Changes apply immediately and persist across restarts. Bottom and icons-only layouts keep their existing widths.
 
 When testing, first quit other tools that take over `⌘Tab` to avoid global shortcut conflicts.
 

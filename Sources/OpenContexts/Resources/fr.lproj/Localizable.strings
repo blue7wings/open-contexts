@@ -4,6 +4,7 @@
 "Top" = "En haut";
 "Center" = "Au centre";
 "Vertical alignment" = "Alignement vertical";
+"Sidebar width" = "Largeur de la barre latérale";
 "Show Ungrouped (hidden when empty)" = "Afficher Sans groupe (masqué si vide)";
 "Show New Group button" = "Afficher le bouton Nouveau groupe";
 "Left" = "Gauche";

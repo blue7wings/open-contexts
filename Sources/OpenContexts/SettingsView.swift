@@ -57,10 +57,14 @@ enum SidebarItemDisplayMode: String, CaseIterable, Identifiable {
 
 @MainActor
 final class AppSettings: ObservableObject {
+    nonisolated static let defaultSidebarWidth = 188.0
+    nonisolated static let sidebarWidthRange = 94.0...376.0
+
     @Published private(set) var sidebarMode: SidebarVisibilityMode
     @Published private(set) var sidebarPosition: SidebarPosition
     @Published private(set) var sidebarItemDisplayMode: SidebarItemDisplayMode
     @Published private(set) var sidebarVerticalAlignment: SidebarVerticalAlignment
+    @Published private(set) var sidebarWidth: Double
     @Published private(set) var showUngrouped: Bool
     @Published private(set) var showCreateGroup: Bool
     @Published private(set) var language: AppLanguage
@@ -89,6 +93,10 @@ final class AppSettings: ObservableObject {
         ) ?? .center
         showUngrouped = defaults.object(forKey: "showUngrouped") as? Bool ?? true
         showCreateGroup = defaults.object(forKey: "showCreateGroup") as? Bool ?? true
+        let savedWidth = defaults.object(forKey: "sidebarWidth") as? Double ?? Self.defaultSidebarWidth
+        sidebarWidth = savedWidth.isFinite
+            ? min(max(savedWidth, Self.sidebarWidthRange.lowerBound), Self.sidebarWidthRange.upperBound)
+            : Self.defaultSidebarWidth
         sidebarItemDisplayMode = SidebarItemDisplayMode(
             rawValue: defaults.string(forKey: "sidebarItemDisplayMode") ?? ""
         ) ?? .iconAndTitle
@@ -119,6 +127,12 @@ final class AppSettings: ObservableObject {
     func setShowUngrouped(_ show: Bool) {
         showUngrouped = show
         defaults.set(show, forKey: "showUngrouped")
+    }
+
+    func setSidebarWidth(_ width: Double) {
+        guard width.isFinite else { return }
+        sidebarWidth = min(max(width, Self.sidebarWidthRange.lowerBound), Self.sidebarWidthRange.upperBound)
+        defaults.set(sidebarWidth, forKey: "sidebarWidth")
     }
 
     func setShowCreateGroup(_ show: Bool) {
@@ -163,7 +177,25 @@ final class AppSettings: ObservableObject {
         defer { defaults.removePersistentDomain(forName: suite) }
         let initial = AppSettings(defaults: defaults)
         guard initial.sidebarMode == .always, initial.sidebarVerticalAlignment == .center,
-              initial.showUngrouped, initial.showCreateGroup else { return false }
+              initial.showUngrouped, initial.showCreateGroup,
+              initial.sidebarWidth == Self.defaultSidebarWidth else { return false }
+        for width in [Self.sidebarWidthRange.lowerBound, Self.defaultSidebarWidth, Self.sidebarWidthRange.upperBound] {
+            initial.setSidebarWidth(width)
+            guard AppSettings(defaults: defaults).sidebarWidth == width else { return false }
+        }
+        initial.setSidebarWidth(1000)
+        guard initial.sidebarWidth == Self.sidebarWidthRange.upperBound else { return false }
+        initial.setSidebarWidth(.nan)
+        guard initial.sidebarWidth == Self.sidebarWidthRange.upperBound else { return false }
+        initial.setSidebarWidth(Self.defaultSidebarWidth)
+        guard initial.sidebarWidth == Self.defaultSidebarWidth,
+              AppSettings(defaults: defaults).sidebarWidth == Self.defaultSidebarWidth else { return false }
+        defaults.set(-1.0, forKey: "sidebarWidth")
+        guard AppSettings(defaults: defaults).sidebarWidth == Self.sidebarWidthRange.lowerBound else { return false }
+        defaults.set(Double.infinity, forKey: "sidebarWidth")
+        guard AppSettings(defaults: defaults).sidebarWidth == Self.defaultSidebarWidth else { return false }
+        defaults.set("invalid", forKey: "sidebarWidth")
+        guard AppSettings(defaults: defaults).sidebarWidth == Self.defaultSidebarWidth else { return false }
         initial.setSidebarMode(.hidden)
         initial.setSidebarVerticalAlignment(.top)
         initial.setShowUngrouped(false)
@@ -269,6 +301,25 @@ struct SettingsView: View {
             .pickerStyle(.segmented)
 
             if settings.sidebarPosition != .bottom {
+                HStack(spacing: 12) {
+                    Text(L10n.text("Sidebar width", language: language))
+                        .fixedSize()
+                    SidebarWidthSlider(
+                        value: Binding(get: { settings.sidebarWidth }, set: settings.setSidebarWidth),
+                        language: language
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 28)
+                    Button {
+                        settings.setSidebarWidth(AppSettings.defaultSidebarWidth)
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .help(L10n.text("Restore defaults", language: language))
+                    .accessibilityLabel(L10n.text("Restore defaults", language: language))
+                }
+                .disabled(settings.sidebarItemDisplayMode == .icon)
+
                 Picker(L10n.text("Vertical alignment", language: language), selection: Binding(
                     get: { settings.sidebarVerticalAlignment },
                     set: settings.setSidebarVerticalAlignment
@@ -356,5 +407,99 @@ struct SettingsView: View {
         }
         .accessibilityLabel(L10n.text(currentAppOnly ? "Current app windows" : "All windows", language: settings.language))
         .accessibilityValue(recording ? L10n.text("Press shortcut…", language: settings.language) : shortcut.display)
+    }
+}
+
+struct SidebarWidthSlider: NSViewRepresentable {
+    @Binding var value: Double
+    var language: AppLanguage
+
+    func makeCoordinator() -> Coordinator { Coordinator(value: $value) }
+
+    func makeNSView(context: Context) -> NSSlider { makeControl(coordinator: context.coordinator) }
+
+    private func makeControl(coordinator: Coordinator) -> NSSlider {
+        let slider = NSSlider(frame: .zero)
+        slider.cell = WidthSliderCell()
+        slider.minValue = AppSettings.sidebarWidthRange.lowerBound
+        slider.maxValue = AppSettings.sidebarWidthRange.upperBound
+        slider.doubleValue = value
+        slider.isContinuous = true
+        slider.target = coordinator
+        slider.action = #selector(Coordinator.changed(_:))
+        slider.setAccessibilityLabel(L10n.text("Sidebar width", language: language))
+        slider.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        return slider
+    }
+
+    func updateNSView(_ slider: NSSlider, context: Context) {
+        context.coordinator.value = $value
+        slider.doubleValue = value
+        slider.isEnabled = context.environment.isEnabled
+        slider.setAccessibilityLabel(L10n.text("Sidebar width", language: language))
+    }
+
+    final class Coordinator: NSObject {
+        var value: Binding<Double>
+        init(value: Binding<Double>) { self.value = value }
+
+        @objc func changed(_ slider: NSSlider) { value.wrappedValue = slider.doubleValue.rounded() }
+    }
+
+    private final class WidthSliderCell: NSSliderCell {
+        override func drawBar(inside rect: NSRect, flipped: Bool) {
+            let knob = knobRect(flipped: flipped)
+            let track = NSRect(x: rect.minX + knob.width / 2, y: knob.midY - 4,
+                               width: max(0, rect.width - knob.width), height: 8)
+            appAccentColor.withAlphaComponent(isEnabled ? 0.18 : 0.08).setFill()
+            NSBezierPath(roundedRect: track, xRadius: 4, yRadius: 4).fill()
+            let filled = NSRect(x: track.minX, y: track.minY,
+                                width: min(max(0, knob.midX - track.minX), track.width), height: track.height)
+            appAccentColor.withAlphaComponent(isEnabled ? 1 : 0.3).setFill()
+            NSBezierPath(roundedRect: filled, xRadius: 4, yRadius: 4).fill()
+        }
+
+        override func drawKnob(_ knobRect: NSRect) {
+            let knob = NSBezierPath(ovalIn: NSRect(x: knobRect.midX - 8, y: knobRect.midY - 8, width: 16, height: 16))
+            NSColor.windowBackgroundColor.setFill()
+            knob.fill()
+            appAccentColor.withAlphaComponent(isEnabled ? 1 : 0.3).setStroke()
+            knob.lineWidth = 2
+            knob.stroke()
+        }
+    }
+
+    static func selfCheck() -> Bool {
+        var width = AppSettings.defaultSidebarWidth
+        let view = Self(value: Binding(get: { width }, set: { width = $0 }), language: .zh)
+        let coordinator = view.makeCoordinator()
+        let slider = view.makeControl(coordinator: coordinator)
+        guard slider.isContinuous, slider.numberOfTickMarks == 0,
+              slider.accessibilityLabel() == "侧边栏宽度" else { return false }
+        for value in [94.0, 188.4, 376.0] {
+            slider.doubleValue = value
+            guard slider.sendAction(slider.action, to: slider.target), width == value.rounded() else { return false }
+        }
+        slider.doubleValue = AppSettings.defaultSidebarWidth
+        slider.appearance = NSAppearance(named: .aqua)
+        for height in [20.0, 28.0] {
+            slider.frame = NSRect(x: 0, y: 0, width: 400, height: height)
+            guard let bitmap = slider.bitmapImageRepForCachingDisplay(in: slider.bounds),
+                  let cell = slider.cell as? NSSliderCell else { return false }
+            slider.cacheDisplay(in: slider.bounds, to: bitmap)
+            let scale = CGFloat(bitmap.pixelsWide) / slider.bounds.width
+            func blueCenter(at x: CGFloat) -> Double? {
+                let rows = (0..<bitmap.pixelsHigh).filter { y in
+                    guard let color = bitmap.colorAt(x: Int(x * scale), y: y)?.usingColorSpace(.sRGB) else { return false }
+                    return color.blueComponent > 0.8 && color.redComponent < 0.5 && color.greenComponent < 0.75
+                }
+                guard let first = rows.first, let last = rows.last else { return nil }
+                return Double(first + last) / 2
+            }
+            guard let trackCenter = blueCenter(at: 30),
+                  let knobCenter = blueCenter(at: cell.knobRect(flipped: slider.isFlipped).midX),
+                  abs(trackCenter - knobCenter) <= 1 else { return false }
+        }
+        return true
     }
 }

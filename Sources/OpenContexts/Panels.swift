@@ -1,8 +1,8 @@
 import AppKit
 import OpenContextsCore
 
-private let rowHoverColor = NSColor(srgbRed: 80 / 255, green: 151 / 255,
-                                    blue: 247 / 255, alpha: 1)
+let appAccentColor = NSColor(srgbRed: 80 / 255, green: 151 / 255,
+                            blue: 247 / 255, alpha: 1)
 
 @MainActor
 final class SidebarPanel: NSPanel, NSMenuDelegate {
@@ -10,7 +10,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
                             _ visibleOrderByGroup: [String: [String]]) -> Void
     typealias GroupMove = (_ id: String, _ beforeGroupID: String?) -> Void
 
-    private let sidebarWidth: CGFloat = 188
+    private var sidebarWidth = CGFloat(AppSettings.defaultSidebarWidth)
     private let edgeWidth: CGFloat = 8
     private let rootView = NSView()
     private let effect = NSVisualEffectView()
@@ -69,6 +69,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         let showUngrouped: Bool
         let showCreateGroup: Bool
         let verticalAlignment: SidebarVerticalAlignment
+        let sidebarWidth: CGFloat
         let position: SidebarPosition
         let itemDisplayMode: SidebarItemDisplayMode
         let language: AppLanguage
@@ -167,11 +168,13 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
                 alwaysVisible: Bool, fullscreen: Bool, enabled: Bool = true,
                 showUngrouped: Bool = true, showCreateGroup: Bool = true,
                 verticalAlignment: SidebarVerticalAlignment = .center,
+                sidebarWidth: CGFloat = CGFloat(AppSettings.defaultSidebarWidth),
                 position: SidebarPosition = .right,
                 itemDisplayMode: SidebarItemDisplayMode = .iconAndTitle,
                 language: AppLanguage = .system) {
         let presentationChanged = self.alwaysVisible != alwaysVisible || self.fullscreen != fullscreen
             || self.enabled != enabled || self.verticalAlignment != verticalAlignment
+            || self.sidebarWidth != sidebarWidth
         if self.enabled != enabled {
             hoverState = SidebarHoverState()
             if enabled {
@@ -190,12 +193,15 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
                                                  enabled: enabled, showUngrouped: showUngrouped,
                                                  showCreateGroup: showCreateGroup,
                                                  verticalAlignment: verticalAlignment,
+                                                 sidebarWidth: sidebarWidth,
                                                  position: position, itemDisplayMode: itemDisplayMode,
                                                  language: language)
             layoutPanel()
             return
         }
         self.position = position
+        let widthChanged = self.sidebarWidth != sidebarWidth
+        self.sidebarWidth = sidebarWidth
         self.verticalAlignment = verticalAlignment
         let groupVisibilityChanged = self.showUngrouped != showUngrouped
             || self.showCreateGroup != showCreateGroup
@@ -206,7 +212,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         let positionChanged = renderedPosition != position
         let displayModeChanged = renderedItemDisplayMode != itemDisplayMode
         let languageChanged = renderedLanguage != language
-        if positionChanged || displayModeChanged {
+        if positionChanged || displayModeChanged || widthChanged {
             renderedPosition = position
             configurePosition()
         }
@@ -516,7 +522,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
             groups: renderedGroups, windowsByGroup: renderedWindows,
             alwaysVisible: alwaysVisible, fullscreen: fullscreen,
             enabled: enabled, showUngrouped: showUngrouped, showCreateGroup: showCreateGroup,
-            verticalAlignment: verticalAlignment, position: position,
+            verticalAlignment: verticalAlignment, sidebarWidth: sidebarWidth, position: position,
             itemDisplayMode: itemDisplayMode, language: language
         )
         self.pendingUpdate = nil
@@ -528,6 +534,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
                alwaysVisible: next.alwaysVisible, fullscreen: next.fullscreen,
                enabled: next.enabled, showUngrouped: next.showUngrouped,
                showCreateGroup: next.showCreateGroup, verticalAlignment: next.verticalAlignment,
+               sidebarWidth: next.sidebarWidth,
                position: next.position, itemDisplayMode: next.itemDisplayMode,
                language: next.language)
     }
@@ -788,7 +795,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
             return true
         }
         let desiredFixedWidths = fixedViews.map {
-            $0 is GroupEndDropView ? 12 : min(sidebarWidth, max(0, $0.fittingSize.width))
+            $0 is GroupEndDropView ? 12 : min(CGFloat(AppSettings.defaultSidebarWidth), max(0, $0.fittingSize.width))
         }
         let desiredFixedTotal = desiredFixedWidths.reduce(0, +)
         let itemCount = fixedViews.count + windows.count
@@ -798,7 +805,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
             ? fixedBudget / desiredFixedTotal : 1
         let fixedWidths = desiredFixedWidths.map { $0 * fixedScale }
         let fixedTotal = fixedWidths.reduce(0, +)
-        let maximumWindowWidth: CGFloat = itemDisplayMode == .icon ? 32 : sidebarWidth
+        let maximumWindowWidth: CGFloat = itemDisplayMode == .icon ? 32 : CGFloat(AppSettings.defaultSidebarWidth)
         let windowWidth = windows.isEmpty ? 0
             : min(maximumWindowWidth, max(0, contentWidth - fixedTotal) / CGFloat(windows.count))
         bottomItemWidthConstraints = zip(fixedViews, fixedWidths).map {
@@ -1494,7 +1501,7 @@ private final class SidebarItemView: NSView, NSDraggingSource {
                 && titleLabel.textColor == .labelColor
         case .window:
             setHovered(true)
-            let entered = layer?.backgroundColor == rowHoverColor.cgColor
+            let entered = layer?.backgroundColor == appAccentColor.cgColor
                 && titleLabel.textColor == .white
             setHovered(false)
             return entered && layer?.backgroundColor == NSColor.clear.cgColor
@@ -1588,7 +1595,7 @@ private final class SidebarItemView: NSView, NSDraggingSource {
 
     private func setHovered(_ hovered: Bool) {
         guard case .window = style else { return }
-        layer?.backgroundColor = hovered ? rowHoverColor.cgColor : NSColor.clear.cgColor
+        layer?.backgroundColor = hovered ? appAccentColor.cgColor : NSColor.clear.cgColor
         titleLabel.textColor = hovered ? .white : .labelColor
     }
 }
@@ -1617,7 +1624,7 @@ private final class SwitcherRow: NSButton {
         isBordered = false
         wantsLayer = true
         layer?.cornerRadius = 6
-        layer?.backgroundColor = selected ? rowHoverColor.cgColor : NSColor.clear.cgColor
+        layer?.backgroundColor = selected ? appAccentColor.cgColor : NSColor.clear.cgColor
         let textColor = selected ? NSColor.white : NSColor.labelColor
         appLabel.alignment = .right
         appLabel.font = .systemFont(ofSize: 13)
@@ -1674,7 +1681,7 @@ private final class SwitcherRow: NSButton {
     override func mouseEntered(with event: NSEvent) { selectUnderPointer(event) }
     override func mouseMoved(with event: NSEvent) { selectUnderPointer(event) }
 
-    fileprivate var smokeHighlighted: Bool { layer?.backgroundColor == rowHoverColor.cgColor }
+    fileprivate var smokeHighlighted: Bool { layer?.backgroundColor == appAccentColor.cgColor }
     fileprivate func smokePointerMove(_ pointer: NSPoint) { onPointerMove(pointer) }
 
     private func selectUnderPointer(_ event: NSEvent) {
@@ -1698,7 +1705,7 @@ private final class SwitcherRow: NSButton {
 
     fileprivate var smokeSelectionAppearanceIsValid: Bool {
         selected
-            ? layer?.backgroundColor == rowHoverColor.cgColor
+            ? layer?.backgroundColor == appAccentColor.cgColor
                 && appLabel.textColor == .white && titleLabel.textColor == .white
             : layer?.backgroundColor == NSColor.clear.cgColor
                 && appLabel.textColor == .labelColor && titleLabel.textColor == .labelColor
@@ -1856,6 +1863,7 @@ enum PanelSmokeCheck {
         _ = NSApplication.shared
         guard WindowService.closingSelfCheck() else { return fail("window close affected another window") }
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return false }
+        guard SidebarWidthSlider.selfCheck() else { return fail("sidebar width slider mismatch") }
 
         var windowMoves: [(String, String, String?)] = []
         var groupMoves: [(String, String?)] = []
@@ -2113,6 +2121,49 @@ enum PanelSmokeCheck {
             }
         }
 
+        for position in [SidebarPosition.left, .right] {
+            for width in [CGFloat(AppSettings.sidebarWidthRange.lowerBound), 188,
+                          CGFloat(AppSettings.sidebarWidthRange.upperBound)] {
+                sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                               alwaysVisible: true, fullscreen: false, sidebarWidth: width, position: position)
+                let rowIdentity = sidebar.smokeWindowIdentity(windows[0].id)
+                let narrower = max(CGFloat(AppSettings.sidebarWidthRange.lowerBound), width - 10)
+                sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                               alwaysVisible: true, fullscreen: false, sidebarWidth: narrower, position: position)
+                guard edgeFrame(sidebar.frame, in: area, position: position, width: narrower),
+                      sidebar.smokePositionLayoutIsValid,
+                      sidebar.smokeWindowWidthIs(narrower - 8),
+                      sidebar.smokeWindowIdentity(windows[0].id) == rowIdentity else {
+                    sidebar.close()
+                    return fail("sidebar live resize mismatch: \(sidebar.smokeLayoutDescription)")
+                }
+                sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                               alwaysVisible: false, fullscreen: true, sidebarWidth: width, position: position)
+                let frames = sidebar.smokeSidebarFrames
+                sidebar.smokeUpdateHover(pointer: CGPoint(x: frames.edge.midX, y: frames.edge.midY), now: 2)
+                guard edgeFrame(sidebar.frame, in: screen.frame, position: position, width: width) else {
+                    sidebar.close()
+                    return fail("custom sidebar width was lost on fullscreen hover")
+                }
+                sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                               alwaysVisible: true, fullscreen: false, sidebarWidth: width, position: position,
+                               itemDisplayMode: .icon)
+                guard abs(sidebar.frame.width - 44) < 1 else {
+                    sidebar.close()
+                    return fail("sidebar width affected icons-only layout")
+                }
+            }
+        }
+        sidebar.smokeBeginDrag()
+        sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                       alwaysVisible: true, fullscreen: false,
+                       sidebarWidth: CGFloat(AppSettings.sidebarWidthRange.upperBound))
+        sidebar.smokeEndDrag()
+        guard abs(sidebar.frame.width - CGFloat(AppSettings.sidebarWidthRange.upperBound)) < 1 else {
+            sidebar.close()
+            return fail("sidebar width update during drag was lost")
+        }
+
         sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
                        alwaysVisible: true, fullscreen: false, position: .bottom,
                        itemDisplayMode: .icon)
@@ -2139,6 +2190,16 @@ enum PanelSmokeCheck {
               abs(sidebar.frame.midX - area.midX) < 1 else {
             sidebar.close()
             return fail("sidebar bottom compact title layout mismatch: \(sidebar.smokeLayoutDescription)")
+        }
+        let originalBottomFrame = sidebar.frame
+        for width in [CGFloat(AppSettings.sidebarWidthRange.lowerBound),
+                      CGFloat(AppSettings.sidebarWidthRange.upperBound)] {
+            sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                           alwaysVisible: true, fullscreen: false, sidebarWidth: width, position: .bottom)
+            guard sidebar.frame.approximatelyEquals(originalBottomFrame), sidebar.smokeWindowWidthIs(188) else {
+                sidebar.close()
+                return fail("sidebar width affected bottom layout")
+            }
         }
         let bottomGroups = [WindowGroup(id: GroupStore.ungroupedID, name: "未分组")] + (1...11).map {
             WindowGroup(id: "bottom-group-\($0)", name: "Bottom Group \($0)")
