@@ -101,27 +101,27 @@
   }
   const swRows = (list, sel, tag = 'div', query = '') => list.map((id, i) =>
     `<${tag} class="srow" role="option" data-i="${i}" aria-selected="${i === sel}"><span class="app">${highlight(APPS[id].name, query)}</span>${ICON[id]}<span class="t">${highlight(APPS[id].title, query)}</span></${tag}>`).join('')
-  const seg = (k, opts, cur) => `<div class="seg" role="group">${opts.map(([v, label]) =>
-    `<button type="button" data-k="${k}" data-v="${v}" aria-pressed="${v === cur}">${label}</button>`).join('')}</div>`
+  const seg = (k, opts, cur, mock) => `<div class="seg" role="radiogroup" aria-label="${T[{ mode: 'sidebar', pos: 'position', align: 'alignment', display: 'display' }[k]]}">${opts.map(([v, label]) =>
+    `<label><input class="bc-input" type="radio" name="${mock ? 'mock' : 'demo'}-${k}" data-k="${k}" data-v="${v}" value="${v}" ${v === cur ? 'checked' : ''}>${label}</label>`).join('')}</div>`
   const settingsForm = s => `<div class="form"><nav class="settings-nav" aria-label="${T.settings}">
-    <button type="button" data-k="page" data-v="general" aria-current="${s.page === 'general' ? 'page' : 'false'}">${T.general}</button>
+    <button class="bc-button" data-variant="ghost" data-size="sm" type="button" data-k="page" data-v="general" aria-current="${s.page === 'general' ? 'page' : 'false'}">${T.general}</button>
     <small>${T.features}</small>
-    ${[['sidebar', T.sidebar], ['shortcuts', T.shortcuts]].map(([page, title]) => `<button type="button" data-k="page" data-v="${page}" aria-current="${s.page === page ? 'page' : 'false'}">${title}</button>`).join('')}
+    ${[['sidebar', T.sidebar], ['shortcuts', T.shortcuts]].map(([page, title]) => `<button class="bc-button" data-variant="ghost" data-size="sm" type="button" data-k="page" data-v="${page}" aria-current="${s.page === page ? 'page' : 'false'}">${title}</button>`).join('')}
     </nav><div class="settings-content">${s.page === 'general' ? `
     <div class="frow"><span>${T.language}</span><span class="val">${zh ? '中文' : 'English'}</span></div>
     <div class="frow"><span>${T.access}</span><span class="val">${T.granted}</span></div>` : s.page === 'shortcuts' ? `
     <div class="frow"><span>${T.allWin}</span><span class="val">⌘Tab</span></div>
     <div class="frow"><span>${T.curWin}</span><span class="val">⌘\`</span></div>` : `
-    <div class="frow"><span>${T.sidebar}</span>${seg('mode', [['always', T.always], ['hover', T.hover], ['hidden', T.off]], s.mode)}</div>
-    <div class="frow"><span>${T.position}</span>${seg('pos', [['left', T.left], ['right', T.right], ['bottom', T.bottom]], s.pos)}</div>
-    ${s.pos !== 'bottom' ? `<div class="frow"><span>${T.alignment}</span>${seg('align', [['top', T.top], ['center', T.center], ['bottom', T.bottom]], s.align)}</div>` : ''}
-    <div class="frow"><span>${T.display}</span>${seg('display', [['icon', T.icon], ['title', T.iconTitle]], s.display)}</div>
+    <div class="frow"><span>${T.sidebar}</span>${seg('mode', [['always', T.always], ['hover', T.hover], ['hidden', T.off]], s.mode, s.mock)}</div>
+    <div class="frow"><span>${T.position}</span>${seg('pos', [['left', T.left], ['right', T.right], ['bottom', T.bottom]], s.pos, s.mock)}</div>
+    ${s.pos !== 'bottom' ? `<div class="frow"><span>${T.alignment}</span>${seg('align', [['top', T.top], ['center', T.center], ['bottom', T.bottom]], s.align, s.mock)}</div>` : ''}
+    <div class="frow"><span>${T.display}</span>${seg('display', [['icon', T.icon], ['title', T.iconTitle]], s.display, s.mock)}</div>
     ${s.pos !== 'bottom' ? `<div class="frow"><label for="sidebar-width-${s.mock ? 'mock' : 'demo'}">${T.width}</label><div class="width-control">
-      <input id="sidebar-width-${s.mock ? 'mock' : 'demo'}" type="range" min="94" max="376" value="${s.width}" data-setting="width" ${s.display === 'icon' ? 'disabled' : ''}>
-      <button type="button" data-act="reset-width" aria-label="${T.reset}" title="${T.reset}" ${s.display === 'icon' ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11a9 9 0 1 1 2.64 6.36M3 4v7h7"/></svg></button></div></div>` : ''}
+      <input class="bc-input" id="sidebar-width-${s.mock ? 'mock' : 'demo'}" type="range" min="94" max="376" value="${s.width}" data-setting="width" ${s.display === 'icon' ? 'disabled' : ''}>
+      <button class="bc-button" data-variant="outline" data-size="icon-sm" type="button" data-act="reset-width" aria-label="${T.reset}" title="${T.reset}" ${s.display === 'icon' ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11a9 9 0 1 1 2.64 6.36M3 4v7h7"/></svg></button></div></div>` : ''}
     <div class="frow"><span>${T.groups}</span><div class="group-options">
-      <label><input type="checkbox" data-setting="showUngrouped" ${s.showUngrouped ? 'checked' : ''}>${T.showUngrouped}</label>
-      <label><input type="checkbox" data-setting="showCreateGroup" ${s.showCreateGroup ? 'checked' : ''}>${T.showCreateGroup}</label>
+      <label><input class="bc-input" type="checkbox" data-setting="showUngrouped" ${s.showUngrouped ? 'checked' : ''}>${T.showUngrouped}</label>
+      <label><input class="bc-input" type="checkbox" data-setting="showCreateGroup" ${s.showCreateGroup ? 'checked' : ''}>${T.showCreateGroup}</label>
     </div></div>`}</div></div>`
 
   const lights = (close = '') => `<span class="lights"><i class="${close}"></i><i></i><i></i></span>`
@@ -262,7 +262,7 @@ Building for production...
       else if (t.closest('.row')) activate(t.closest('.row').dataset.id)
       else if (t.closest('.srow')) { st.sw.sel = +t.closest('.srow').dataset.i; commit() }
       else if (t.closest('[data-act="reset-width"]')) { st.width = sidebarDefaults.width; render() }
-      else if (t.closest('[data-k]')) { const b = t.closest('[data-k]'); st[b.dataset.k] = b.dataset.v; render() }
+      else if (t.closest('button[data-k]')) { const b = t.closest('button[data-k]'); st[b.dataset.k] = b.dataset.v; render() }
     })
     screen.addEventListener('input', e => {
       if (e.target.dataset.setting === 'width') {
@@ -271,9 +271,15 @@ Building for production...
       }
     })
     screen.addEventListener('change', e => {
-      if (['showUngrouped', 'showCreateGroup'].includes(e.target.dataset.setting)) {
+      if (e.target.matches('input[type="radio"][data-k]')) {
+        const { k, v } = e.target.dataset
+        st[k] = v
+        render()
+        screen.querySelector(`input[data-k="${k}"][data-v="${v}"]`).focus({ preventScroll: true })
+      } else if (['showUngrouped', 'showCreateGroup'].includes(e.target.dataset.setting)) {
         st[e.target.dataset.setting] = e.target.checked
         render()
+        screen.querySelector(`input[data-setting="${e.target.dataset.setting}"]`).focus({ preventScroll: true })
       }
     })
     sw.addEventListener('mouseover', e => {

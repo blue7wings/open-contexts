@@ -43,6 +43,24 @@ assert.ok(!settingsForm({ ...sidebarDefaults, pos: 'bottom' }).includes('type="r
 assert.match(settingsForm({ ...sidebarDefaults, display: 'icon' }), /data-setting="width" disabled/)
 assert.ok(!settingsForm({ ...sidebarDefaults, page: 'general' }).includes('type="range"'))
 
+// Native radio groups must stay independent between the demo and illustration.
+assert.match(settingsForm(sidebarDefaults), /name="demo-pos"/)
+assert.match(settingsForm({ ...sidebarDefaults, mock: true }), /name="mock-pos"/)
+let change, focused
+const settingsState = { ...sidebarDefaults }
+vm.runInNewContext(source.slice(source.indexOf("    screen.addEventListener('change'"),
+  source.indexOf("    sw.addEventListener('mouseover'")), {
+  screen: { addEventListener: (_, callback) => { change = callback },
+    querySelector: selector => ({ focus: () => { focused = selector } }) },
+  st: settingsState, render() {},
+})
+change({ target: { matches: () => true, dataset: { k: 'pos', v: 'bottom' } } })
+assert.equal(settingsState.pos, 'bottom')
+assert.equal(focused, 'input[data-k="pos"][data-v="bottom"]')
+change({ target: { matches: () => false, dataset: { setting: 'showUngrouped' }, checked: false } })
+assert.equal(settingsState.showUngrouped, false)
+assert.equal(focused, 'input[data-setting="showUngrouped"]')
+
 // Execute the real key listener so native editing and the held-Option demo cannot regress.
 let keydown
 const state = { sw: { query: 'chr', list: [], sel: 0 }, mru: MRU0 }
