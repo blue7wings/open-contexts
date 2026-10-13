@@ -118,7 +118,7 @@
     <div class="frow"><span>${T.display}</span>${seg('display', [['icon', T.icon], ['title', T.iconTitle]], s.display)}</div>
     ${s.pos !== 'bottom' ? `<div class="frow"><label for="sidebar-width-${s.mock ? 'mock' : 'demo'}">${T.width}</label><div class="width-control">
       <input id="sidebar-width-${s.mock ? 'mock' : 'demo'}" type="range" min="94" max="376" value="${s.width}" data-setting="width" ${s.display === 'icon' ? 'disabled' : ''}>
-      <button type="button" data-act="reset-width" aria-label="${T.reset}" title="${T.reset}" ${s.display === 'icon' ? 'disabled' : ''}>↺</button></div></div>` : ''}
+      <button type="button" data-act="reset-width" aria-label="${T.reset}" title="${T.reset}" ${s.display === 'icon' ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11a9 9 0 1 1 2.64 6.36M3 4v7h7"/></svg></button></div></div>` : ''}
     <div class="frow"><span>${T.groups}</span><div class="group-options">
       <label><input type="checkbox" data-setting="showUngrouped" ${s.showUngrouped ? 'checked' : ''}>${T.showUngrouped}</label>
       <label><input type="checkbox" data-setting="showCreateGroup" ${s.showCreateGroup ? 'checked' : ''}>${T.showCreateGroup}</label>
