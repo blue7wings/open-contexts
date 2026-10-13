@@ -58,3 +58,7 @@
 "%@ results" = "%@ resultados";
 "No matching windows" = "No hay ventanas coincidentes";
 "Try an app name or window title" = "Prueba un nombre de app o título de ventana";
+"General" = "General";
+"Features" = "Funciones";
+"Shortcuts" = "Atajos";
+"Groups" = "Grupos";

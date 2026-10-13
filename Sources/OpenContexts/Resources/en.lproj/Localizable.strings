@@ -58,3 +58,7 @@
 "%@ results" = "%@ results";
 "No matching windows" = "No matching windows";
 "Try an app name or window title" = "Try an app name or window title";
+"General" = "General";
+"Features" = "Features";
+"Shortcuts" = "Shortcuts";
+"Groups" = "Groups";

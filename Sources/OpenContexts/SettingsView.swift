@@ -252,117 +252,96 @@ final class AppSettings: ObservableObject {
     }
 }
 
+private enum SettingsPage: String, CaseIterable, Identifiable {
+    case general = "General"
+    case sidebar = "Sidebar"
+    case shortcuts = "Shortcuts"
+
+    var id: String { rawValue }
+    var symbol: String {
+        switch self {
+        case .general: "slider.horizontal.3"
+        case .sidebar: "sidebar.left"
+        case .shortcuts: "keyboard"
+        }
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var windowService: WindowService
     @ObservedObject var groupStore: GroupStore
     @ObservedObject var shortcuts: ShortcutController
+    @State private var page: SettingsPage = .general
+
+    private var language: AppLanguage { settings.language }
 
     var body: some View {
-        let language = settings.language
-        Form {
-            Picker(L10n.text("Sidebar", language: language), selection: Binding(
-                get: { settings.sidebarMode },
-                set: settings.setSidebarMode
-            )) {
-                ForEach(SidebarVisibilityMode.allCases) { mode in
-                    Text(mode.title(language)).tag(mode)
+        HStack(spacing: 0) {
+            List(selection: $page) {
+                navigationItem(.general)
+                Section(L10n.text("Features", language: language)) {
+                    navigationItem(.sidebar)
+                    navigationItem(.shortcuts)
                 }
             }
-            .pickerStyle(.segmented)
-
-            Toggle(L10n.text("Show Ungrouped (hidden when empty)", language: language), isOn: Binding(
-                get: { settings.showUngrouped },
-                set: settings.setShowUngrouped
-            ))
-            Toggle(L10n.text("Show New Group button", language: language), isOn: Binding(
-                get: { settings.showCreateGroup },
-                set: settings.setShowCreateGroup
-            ))
-
-            Picker(L10n.text("Display", language: language), selection: Binding(
-                get: { settings.sidebarItemDisplayMode },
-                set: settings.setSidebarItemDisplayMode
-            )) {
-                ForEach(SidebarItemDisplayMode.allCases) { mode in
-                    Text(mode.title(language)).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            Picker(L10n.text("Sidebar position", language: language), selection: Binding(
-                get: { settings.sidebarPosition },
-                set: settings.setSidebarPosition
-            )) {
-                ForEach(SidebarPosition.allCases) { position in
-                    Text(position.title(language)).tag(position)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            if settings.sidebarPosition != .bottom {
-                HStack(spacing: 12) {
-                    Text(L10n.text("Sidebar width", language: language))
-                        .fixedSize()
-                    SidebarWidthSlider(
-                        value: Binding(get: { settings.sidebarWidth }, set: settings.setSidebarWidth),
-                        language: language
-                    )
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 28)
-                    Button {
-                        settings.setSidebarWidth(AppSettings.defaultSidebarWidth)
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
+            .listStyle(.sidebar)
+            .frame(width: 170)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 26) {
+                    switch page {
+                    case .general: generalSettings
+                    case .sidebar: sidebarSettings
+                    case .shortcuts: shortcutSettings
                     }
-                    .help(L10n.text("Restore defaults", language: language))
-                    .accessibilityLabel(L10n.text("Restore defaults", language: language))
                 }
-                .disabled(settings.sidebarItemDisplayMode == .icon)
+                .padding(30)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+            .background(Color(nsColor: .windowBackgroundColor))
+        }
+        .font(.system(size: 13))
+        .tint(Color(nsColor: appAccentColor))
+        .frame(width: 840, height: 600)
+        .onChange(of: page) { _ in shortcuts.cancelRecording() }
+        .onDisappear { shortcuts.cancelRecording() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
+            shortcuts.cancelRecording()
+        }
+    }
 
-                Picker(L10n.text("Vertical alignment", language: language), selection: Binding(
-                    get: { settings.sidebarVerticalAlignment },
-                    set: settings.setSidebarVerticalAlignment
+    private func navigationItem(_ destination: SettingsPage) -> some View {
+        Label(L10n.text(destination.rawValue, language: language), systemImage: destination.symbol)
+            .font(.system(size: 14))
+            .padding(.vertical, 5)
+            .tag(destination)
+    }
+
+    private func settingsRow<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 16) {
+            Text(L10n.text(title, language: language) + ":")
+                .multilineTextAlignment(.trailing)
+                .frame(width: 130, alignment: .trailing)
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var generalSettings: some View {
+        Group {
+            settingsRow("Language") {
+                Picker(L10n.text("Language", language: language), selection: Binding(
+                    get: { settings.language }, set: settings.setLanguage
                 )) {
-                    ForEach(SidebarVerticalAlignment.allCases) { alignment in
-                        Text(alignment.title(language)).tag(alignment)
+                    ForEach(AppLanguage.allCases) { option in
+                        Text(option == .system ? L10n.text("System", language: language) : option.name).tag(option)
                     }
                 }
-                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 200)
             }
-
-            Picker(L10n.text("Language", language: language), selection: Binding(
-                get: { settings.language },
-                set: settings.setLanguage
-            )) {
-                ForEach(AppLanguage.allCases) { option in
-                    Text(option == .system ? L10n.text("System", language: language) : option.name).tag(option)
-                }
-            }
-
-            LabeledContent(L10n.text("All windows", language: language)) {
-                shortcutButton(currentAppOnly: false)
-            }
-            LabeledContent(L10n.text("Current app windows", language: language)) {
-                shortcutButton(currentAppOnly: true)
-            }
-            HStack {
-                Text(L10n.text("Click a shortcut to record. Esc cancels; Shift switches backward.", language: language))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button(L10n.text("Restore defaults", language: language)) {
-                    shortcuts.cancelRecording()
-                    settings.resetShortcuts()
-                }
-            }
-            if let error = shortcuts.recordingErrorKey {
-                Text(L10n.text(error, language: language))
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-
-            LabeledContent(L10n.text("Accessibility", language: language)) {
+            settingsRow("Accessibility") {
                 HStack {
                     Text(L10n.text(windowService.hasAccessibility ? "Granted" : "Not granted", language: language))
                     if !windowService.hasAccessibility {
@@ -370,7 +349,7 @@ struct SettingsView: View {
                     }
                 }
             }
-            LabeledContent(L10n.text("Global shortcuts", language: language)) {
+            settingsRow("Global shortcuts") {
                 HStack {
                     Text(L10n.text(shortcuts.isRunning ? "Running" : "Not running", language: language))
                     if windowService.hasAccessibility && !shortcuts.isRunning {
@@ -380,16 +359,118 @@ struct SettingsView: View {
             }
             if let detail = groupStore.persistenceErrorDetail,
                let operation = groupStore.persistenceErrorOperation {
-                Text(L10n.format(operation == .read ? "Could not read group data: %@" : "Could not save group data: %@",
-                                 detail, language: language)).foregroundStyle(.red)
+                settingsRow("Groups") {
+                    Text(L10n.format(operation == .read ? "Could not read group data: %@" : "Could not save group data: %@",
+                                     detail, language: language))
+                        .foregroundStyle(.red)
+                }
             }
         }
-        .formStyle(.grouped)
-        .padding()
-        .frame(width: 540, height: 540)
-        .onDisappear { shortcuts.cancelRecording() }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
-            shortcuts.cancelRecording()
+    }
+
+    private var sidebarSettings: some View {
+        Group {
+            settingsRow("Sidebar") {
+                Picker(L10n.text("Sidebar", language: language), selection: Binding(
+                    get: { settings.sidebarMode }, set: settings.setSidebarMode
+                )) {
+                    ForEach(SidebarVisibilityMode.allCases) { mode in
+                        Text(mode.title(language)).tag(mode)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                .horizontalRadioGroupLayout()
+                .labelsHidden()
+            }
+            settingsRow("Sidebar position") {
+                Picker(L10n.text("Sidebar position", language: language), selection: Binding(
+                    get: { settings.sidebarPosition }, set: settings.setSidebarPosition
+                )) {
+                    ForEach(SidebarPosition.allCases) { position in
+                        Text(position.title(language)).tag(position)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                .horizontalRadioGroupLayout()
+                .labelsHidden()
+            }
+            if settings.sidebarPosition != .bottom {
+                settingsRow("Vertical alignment") {
+                    Picker(L10n.text("Vertical alignment", language: language), selection: Binding(
+                        get: { settings.sidebarVerticalAlignment }, set: settings.setSidebarVerticalAlignment
+                    )) {
+                        ForEach(SidebarVerticalAlignment.allCases) { alignment in
+                            Text(alignment.title(language)).tag(alignment)
+                        }
+                    }
+                    .pickerStyle(.radioGroup)
+                    .horizontalRadioGroupLayout()
+                    .labelsHidden()
+                }
+            }
+            settingsRow("Display") {
+                Picker(L10n.text("Display", language: language), selection: Binding(
+                    get: { settings.sidebarItemDisplayMode }, set: settings.setSidebarItemDisplayMode
+                )) {
+                    ForEach(SidebarItemDisplayMode.allCases) { mode in
+                        Text(mode.title(language)).tag(mode)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                .horizontalRadioGroupLayout()
+                .labelsHidden()
+            }
+            if settings.sidebarPosition != .bottom {
+                settingsRow("Sidebar width") {
+                    HStack(spacing: 12) {
+                        SidebarWidthSlider(
+                            value: Binding(get: { settings.sidebarWidth }, set: settings.setSidebarWidth),
+                            language: language
+                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 28)
+                        Button {
+                            settings.setSidebarWidth(AppSettings.defaultSidebarWidth)
+                        } label: {
+                            Image(systemName: "arrow.counterclockwise")
+                        }
+                        .help(L10n.text("Restore defaults", language: language))
+                        .accessibilityLabel(L10n.text("Restore defaults", language: language))
+                    }
+                    .disabled(settings.sidebarItemDisplayMode == .icon)
+                }
+            }
+            settingsRow("Groups") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(L10n.text("Show Ungrouped (hidden when empty)", language: language), isOn: Binding(
+                        get: { settings.showUngrouped }, set: settings.setShowUngrouped
+                    ))
+                    Toggle(L10n.text("Show New Group button", language: language), isOn: Binding(
+                        get: { settings.showCreateGroup }, set: settings.setShowCreateGroup
+                    ))
+                }
+                .toggleStyle(.checkbox)
+            }
+        }
+    }
+
+    private var shortcutSettings: some View {
+        Group {
+            settingsRow("All windows") { shortcutButton(currentAppOnly: false) }
+            settingsRow("Current app windows") { shortcutButton(currentAppOnly: true) }
+            settingsRow("Shortcuts") {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(L10n.text("Click a shortcut to record. Esc cancels; Shift switches backward.", language: language))
+                        .foregroundStyle(.secondary)
+                    Button(L10n.text("Restore defaults", language: language)) {
+                        shortcuts.cancelRecording()
+                        settings.resetShortcuts()
+                    }
+                    if let error = shortcuts.recordingErrorKey {
+                        Text(L10n.text(error, language: language)).foregroundStyle(.red)
+                    }
+                }
+            }
         }
     }
 
@@ -407,6 +488,39 @@ struct SettingsView: View {
         }
         .accessibilityLabel(L10n.text(currentAppOnly ? "Current app windows" : "All windows", language: settings.language))
         .accessibilityValue(recording ? L10n.text("Press shortcut…", language: settings.language) : shortcut.display)
+    }
+
+    @MainActor
+    static func selfCheck() -> Bool {
+        let suite = "OpenContexts.settings-layout-check.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suite) else { return false }
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        let service = WindowService()
+        let groups = GroupStore(fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(suite).json"))
+        let shortcuts = ShortcutController()
+        func sliders(in view: NSView) -> [NSSlider] {
+            (view as? NSSlider).map { [$0] } ?? view.subviews.flatMap { sliders(in: $0) }
+        }
+        for page in SettingsPage.allCases {
+            for position in SidebarPosition.allCases {
+                settings.setSidebarPosition(position)
+                var view = Self(settings: settings, windowService: service, groupStore: groups, shortcuts: shortcuts)
+                view._page = State(initialValue: page)
+                let host = NSHostingView(rootView: view)
+                host.frame = NSRect(x: 0, y: 0, width: 840, height: 600)
+                host.layoutSubtreeIfNeeded()
+                let controls = sliders(in: host)
+                let showsWidth = page == .sidebar && position != .bottom
+                guard controls.count == (showsWidth ? 1 : 0) else { return false }
+                if let slider = controls.first {
+                    guard slider.doubleValue == AppSettings.defaultSidebarWidth,
+                          slider.frame.width > 100 else { return false }
+                }
+            }
+        }
+        return true
     }
 }
 

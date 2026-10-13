@@ -1864,6 +1864,7 @@ enum PanelSmokeCheck {
         guard WindowService.closingSelfCheck() else { return fail("window close affected another window") }
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return false }
         guard SidebarWidthSlider.selfCheck() else { return fail("sidebar width slider mismatch") }
+        guard SettingsView.selfCheck() else { return fail("settings page layout mismatch") }
 
         var windowMoves: [(String, String, String?)] = []
         var groupMoves: [(String, String?)] = []

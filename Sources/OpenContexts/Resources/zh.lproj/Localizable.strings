@@ -58,3 +58,7 @@
 "%@ results" = "%@ 个结果";
 "No matching windows" = "没有匹配窗口";
 "Try an app name or window title" = "试试应用名或窗口标题";
+"General" = "通用";
+"Features" = "功能";
+"Shortcuts" = "快捷键";
+"Groups" = "分组";

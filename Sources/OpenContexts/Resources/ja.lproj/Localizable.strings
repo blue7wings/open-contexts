@@ -58,3 +58,7 @@
 "%@ results" = "%@ 件の結果";
 "No matching windows" = "一致するウインドウがありません";
 "Try an app name or window title" = "アプリ名またはタイトルで検索してください";
+"General" = "一般";
+"Features" = "機能";
+"Shortcuts" = "ショートカット";
+"Groups" = "グループ";
