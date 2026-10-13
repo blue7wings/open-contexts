@@ -29,6 +29,11 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     private let displayScreen: NSScreen
     private var alwaysVisible = false
     private var fullscreen = false
+    private var enabled = true
+    private var showUngrouped = true
+    private var showCreateGroup = true
+    private var hasVisibleContent = true
+    private var verticalAlignment: SidebarVerticalAlignment = .center
     private var position: SidebarPosition = .right
     private var itemDisplayMode: SidebarItemDisplayMode = .iconAndTitle
     private var language: AppLanguage = .system
@@ -60,6 +65,10 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         let windowsByGroup: [String: [WindowInfo]]
         let alwaysVisible: Bool
         let fullscreen: Bool
+        let enabled: Bool
+        let showUngrouped: Bool
+        let showCreateGroup: Bool
+        let verticalAlignment: SidebarVerticalAlignment
         let position: SidebarPosition
         let itemDisplayMode: SidebarItemDisplayMode
         let language: AppLanguage
@@ -155,21 +164,43 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     }
 
     func update(groups: [WindowGroup], windowsByGroup: [String: [WindowInfo]],
-                alwaysVisible: Bool, fullscreen: Bool, position: SidebarPosition = .right,
+                alwaysVisible: Bool, fullscreen: Bool, enabled: Bool = true,
+                showUngrouped: Bool = true, showCreateGroup: Bool = true,
+                verticalAlignment: SidebarVerticalAlignment = .center,
+                position: SidebarPosition = .right,
                 itemDisplayMode: SidebarItemDisplayMode = .iconAndTitle,
                 language: AppLanguage = .system) {
         let presentationChanged = self.alwaysVisible != alwaysVisible || self.fullscreen != fullscreen
+            || self.enabled != enabled || self.verticalAlignment != verticalAlignment
+        if self.enabled != enabled {
+            hoverState = SidebarHoverState()
+            if enabled {
+                startHoverPolling()
+            } else {
+                hoverTimer?.invalidate()
+                hoverTimer = nil
+            }
+        }
+        self.enabled = enabled
         self.alwaysVisible = alwaysVisible
         self.fullscreen = fullscreen
         guard !dragging else {
             pendingUpdate = PendingSidebarUpdate(groups: groups, windowsByGroup: windowsByGroup,
                                                  alwaysVisible: alwaysVisible, fullscreen: fullscreen,
+                                                 enabled: enabled, showUngrouped: showUngrouped,
+                                                 showCreateGroup: showCreateGroup,
+                                                 verticalAlignment: verticalAlignment,
                                                  position: position, itemDisplayMode: itemDisplayMode,
                                                  language: language)
             layoutPanel()
             return
         }
         self.position = position
+        self.verticalAlignment = verticalAlignment
+        let groupVisibilityChanged = self.showUngrouped != showUngrouped
+            || self.showCreateGroup != showCreateGroup
+        self.showUngrouped = showUngrouped
+        self.showCreateGroup = showCreateGroup
         self.itemDisplayMode = itemDisplayMode
         self.language = language
         let positionChanged = renderedPosition != position
@@ -182,7 +213,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         if displayModeChanged { renderedItemDisplayMode = itemDisplayMode }
         if languageChanged { renderedLanguage = language }
         guard groups != renderedGroups || windowsByGroup != renderedWindows
-                || positionChanged || displayModeChanged || languageChanged else {
+                || positionChanged || displayModeChanged || languageChanged || groupVisibilityChanged else {
             if presentationChanged {
                 if position == .bottom { configureBottomItemWidths() }
                 layoutPanel()
@@ -205,7 +236,12 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
             $0.removeFromSuperview()
         }
 
-        for group in groups {
+        let visibleGroups = groups.filter {
+            $0.id != GroupStore.ungroupedID
+                || (showUngrouped && !windowsByGroup[$0.id, default: []].isEmpty)
+        }
+        hasVisibleContent = !visibleGroups.isEmpty || showCreateGroup
+        for group in visibleGroups {
             let header = SidebarItemView(
                 title: group.id == GroupStore.ungroupedID
                     ? L10n.text("Ungrouped", language: language) : group.name,
@@ -255,9 +291,11 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
                 }
             }
         }
-        let create = CallbackButton(title: L10n.text("＋ New Group", language: language)) { [weak self] in self?.createGroup() }
-        stack.addArrangedSubview(create)
-        constrainAuxiliaryItem(create)
+        if showCreateGroup {
+            let create = CallbackButton(title: L10n.text("＋ New Group", language: language)) { [weak self] in self?.createGroup() }
+            stack.addArrangedSubview(create)
+            constrainAuxiliaryItem(create)
+        }
         let endDrop = GroupEndDropView(language: language)
         stack.addArrangedSubview(endDrop)
         constrainAuxiliaryItem(endDrop)
@@ -265,10 +303,10 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
             naturalContentHeight = 44
             configureBottomItemWidths()
         } else {
-            naturalContentHeight = Self.contentHeight(groupCount: groups.count,
-                                                      windowCount: groups.reduce(0) {
+            naturalContentHeight = Self.contentHeight(groupCount: visibleGroups.count,
+                                                      windowCount: visibleGroups.reduce(0) {
                 $0 + windowsByGroup[$1.id, default: []].count
-            })
+            }, showCreateGroup: showCreateGroup)
         }
         layoutPanel()
         layoutDocumentView()
@@ -381,6 +419,11 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     }
 
     private func layoutPanel() {
+        guard enabled, hasVisibleContent else {
+            hoverState = SidebarHoverState()
+            if isVisible { orderOut(nil) }
+            return
+        }
         let frames = sidebarFrames()
         let expanded = hoverState.isExpanded || dragging || (alwaysVisible && !fullscreen)
         let target = expanded ? frames.expanded : frames.edge
@@ -399,7 +442,11 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     private func sidebarFrames() -> (edge: NSRect, expanded: NSRect) {
         let area = fullscreen ? displayScreen.frame : displayScreen.visibleFrame
         let height = min(naturalContentHeight, area.height)
-        let y = area.midY - height / 2
+        let y: CGFloat = switch verticalAlignment {
+        case .top: area.maxY - height
+        case .center: area.midY - height / 2
+        case .bottom: area.minY
+        }
         let expandedWidth = itemDisplayMode == .icon ? CGFloat(44) : sidebarWidth
         switch position {
         case .left:
@@ -435,6 +482,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     }
 
     private func updateHover(pointer: CGPoint, now: TimeInterval) {
+        guard enabled, hasVisibleContent else { return }
         let frames = sidebarFrames()
         if hoverState.update(pointer: pointer, edgeFrame: frames.edge, expandedFrame: frames.expanded,
                              dragging: dragging, now: now) {
@@ -466,7 +514,9 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         }
         let next = pendingUpdate ?? PendingSidebarUpdate(
             groups: renderedGroups, windowsByGroup: renderedWindows,
-            alwaysVisible: alwaysVisible, fullscreen: fullscreen, position: position,
+            alwaysVisible: alwaysVisible, fullscreen: fullscreen,
+            enabled: enabled, showUngrouped: showUngrouped, showCreateGroup: showCreateGroup,
+            verticalAlignment: verticalAlignment, position: position,
             itemDisplayMode: itemDisplayMode, language: language
         )
         self.pendingUpdate = nil
@@ -476,6 +526,8 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         renderedWindows = [:]
         update(groups: next.groups, windowsByGroup: next.windowsByGroup,
                alwaysVisible: next.alwaysVisible, fullscreen: next.fullscreen,
+               enabled: next.enabled, showUngrouped: next.showUngrouped,
+               showCreateGroup: next.showCreateGroup, verticalAlignment: next.verticalAlignment,
                position: next.position, itemDisplayMode: next.itemDisplayMode,
                language: next.language)
     }
@@ -772,8 +824,8 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         stack.layoutSubtreeIfNeeded()
     }
 
-    private static func contentHeight(groupCount: Int, windowCount: Int) -> CGFloat {
-        12 + CGFloat(groupCount * 32 + windowCount * 25 + 30 + 12)
+    private static func contentHeight(groupCount: Int, windowCount: Int, showCreateGroup: Bool) -> CGFloat {
+        12 + CGFloat(groupCount * 32 + windowCount * 25 + (showCreateGroup ? 30 : 0) + 12)
     }
 
     private func createGroup() {
@@ -886,6 +938,9 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     }
 
     fileprivate var smokeNaturalContentHeight: CGFloat { naturalContentHeight }
+    fileprivate var smokeHasCreateGroupButton: Bool {
+        stack.arrangedSubviews.contains { $0 is CallbackButton }
+    }
     fileprivate var smokeRowOrder: [String] {
         sidebarRows.map {
             switch $0.style {
@@ -1833,7 +1888,7 @@ enum PanelSmokeCheck {
                            alwaysVisible: true, fullscreen: false, position: .right)
             sidebar.contentView?.layoutSubtreeIfNeeded()
             measuredHeights[count] = sidebar.frame.height
-            guard naturalHeightIsValid(sidebar, in: area), sidebar.smokeRowsAreCompact,
+            guard naturalHeightIsValid(sidebar, in: area), (count == 0 || sidebar.smokeRowsAreCompact),
                   sidebar.smokeRowHoverAppearanceIsValid, sidebar.smokePositionLayoutIsValid else {
                 sidebar.close()
                 return fail("sidebar natural height mismatch count=\(count): \(sidebar.smokeLayoutDescription)")
@@ -1844,6 +1899,87 @@ enum PanelSmokeCheck {
             sidebar.close()
             return fail("sidebar natural heights did not grow: \(measuredHeights)")
         }
+        let visibilityGroups = groups + [WindowGroup(id: "empty-group", name: "Empty")]
+        sidebar.update(groups: visibilityGroups, windowsByGroup: [:],
+                       alwaysVisible: true, fullscreen: false)
+        guard sidebar.smokeRowOrder == ["g:empty-group"], sidebar.smokeHasCreateGroupButton else {
+            sidebar.close()
+            return fail("empty Ungrouped was not hidden or custom empty group was lost")
+        }
+        sidebar.update(groups: visibilityGroups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                       alwaysVisible: true, fullscreen: false, showUngrouped: false, showCreateGroup: false)
+        guard sidebar.smokeRowOrder == ["g:empty-group"], !sidebar.smokeHasCreateGroupButton,
+              abs(sidebar.smokeNaturalContentHeight - 56) < 1 else {
+            sidebar.close()
+            return fail("group visibility settings did not update rows and height")
+        }
+        sidebar.smokeBeginDrag()
+        sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                       alwaysVisible: true, fullscreen: false)
+        sidebar.smokeEndDrag()
+        guard sidebar.smokeRowOrder == ["g:\(GroupStore.ungroupedID)", "w:\(windows[0].id)"],
+              sidebar.smokeHasCreateGroupButton else {
+            sidebar.close()
+            return fail("group visibility update during drag was not applied")
+        }
+        sidebar.update(groups: groups, windowsByGroup: [:], alwaysVisible: true, fullscreen: false,
+                       showCreateGroup: false)
+        var visibilityFrames = sidebar.smokeSidebarFrames
+        sidebar.smokeUpdateHover(pointer: CGPoint(x: visibilityFrames.edge.midX, y: visibilityFrames.edge.midY), now: 0)
+        guard sidebar.smokeIsHidden, sidebar.smokeRowOrder.isEmpty else {
+            sidebar.close()
+            return fail("empty sidebar retained a visible or hoverable panel")
+        }
+        for position in SidebarPosition.allCases {
+            sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                           alwaysVisible: true, fullscreen: false, position: position)
+            guard !sidebar.smokeIsHidden else {
+                sidebar.close()
+                return fail("sidebar did not reappear when windows returned")
+            }
+            sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                           alwaysVisible: true, fullscreen: true, enabled: false, position: position)
+            visibilityFrames = sidebar.smokeSidebarFrames
+            sidebar.smokeUpdateHover(pointer: CGPoint(x: visibilityFrames.edge.midX, y: visibilityFrames.edge.midY), now: 0)
+            guard sidebar.smokeIsHidden else {
+                sidebar.close()
+                return fail("disabled sidebar reappeared on hover")
+            }
+        }
+        for position in [SidebarPosition.left, .right] {
+            for fullscreen in [false, true] {
+                let alignmentArea = fullscreen ? screen.frame : area
+                for count in [1, 200] {
+                    for alignment in SidebarVerticalAlignment.allCases {
+                        sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: Array(windows.prefix(count))],
+                                       alwaysVisible: !fullscreen, fullscreen: fullscreen,
+                                       verticalAlignment: alignment, position: position)
+                        let frames = sidebar.smokeSidebarFrames
+                        let expectedY: CGFloat = switch alignment {
+                        case .top: alignmentArea.maxY - frames.expanded.height
+                        case .center: alignmentArea.midY - frames.expanded.height / 2
+                        case .bottom: alignmentArea.minY
+                        }
+                        guard abs(frames.expanded.minY - expectedY) < 1,
+                              abs(frames.edge.minY - expectedY) < 1,
+                              frames.expanded.minY >= alignmentArea.minY - 1,
+                              frames.expanded.maxY <= alignmentArea.maxY + 1 else {
+                            sidebar.close()
+                            return fail("sidebar vertical alignment mismatch")
+                        }
+                        sidebar.smokeUpdateHover(pointer: CGPoint(x: frames.edge.midX, y: frames.edge.midY), now: 0)
+                        guard !sidebar.smokeIsHidden, abs(sidebar.frame.minY - expectedY) < 1 else {
+                            sidebar.close()
+                            return fail("aligned sidebar did not expand at its edge")
+                        }
+                        let outside = CGPoint(x: frames.expanded.midX, y: alignmentArea.maxY + 40)
+                        sidebar.smokeUpdateHover(pointer: outside, now: 0.1)
+                        sidebar.smokeUpdateHover(pointer: outside, now: 0.23)
+                    }
+                }
+            }
+        }
+        sidebar.smokeStopHoverPolling()
         sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: Array(windows.prefix(3))],
                        alwaysVisible: true, fullscreen: false, position: .right)
         guard sidebar.smokeWindowMenusAreValid(windowIDs: Array(windows.prefix(3)).map(\.id)) else {

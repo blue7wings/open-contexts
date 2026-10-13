@@ -39,7 +39,7 @@ The window switcher displays windows in most recently used order. You can contin
 | Feature | How it works |
 | --- | --- |
 | Window switching | Displays and switches individual windows rather than apps, and tracks most recently used (MRU) order |
-| Screen edge sidebar | Supports the left, right, or bottom edge; always visible or shown when the pointer reaches the screen edge; optionally shows icons alone or icons with titles |
+| Screen edge sidebar | Supports the left, right, or bottom edge; always visible, shown on hover, or off; left and right sidebars can align to the top, center, or bottom; optionally shows icons alone or icons with titles |
 | Keyboard switcher | Defaults to `⌘Tab` for all windows and `Command + backtick` for the current app; both shortcuts are customizable in Settings; supports Shift for reverse switching, arrow keys, `Esc`, and releasing a shortcut modifier to confirm |
 | Window search | Search by app name or window title: hold the switcher modifier, type, then release to switch; matches are highlighted in yellow |
 | Window activation | Attempts to restore minimized or hidden windows when activated |
@@ -95,7 +95,8 @@ xattr -dr com.apple.quarantine "/Applications/OpenContexts.app"
 - `＋` in the sidebar: Create a group.
 - Right-click a group title: Rename or delete the group.
 - Drag a window to move it into a group or change its order; drag a group title to reorder groups.
-- Menu bar settings: Place the sidebar on the left, right, or bottom, and choose whether it is always visible or shown when the pointer approaches the screen edge.
+- Group visibility: Hide Ungrouped and its windows or the New Group button in settings. Ungrouped hides automatically when empty; custom empty groups remain. Hiding does not delete groups or windows.
+- Menu bar settings: Place the sidebar on the left, right, or bottom, and choose always visible, show on hover, or off. Left and right sidebars support top, center, and bottom alignment. The keyboard switcher stays available while the sidebar is off; reopen settings from the menu bar to enable it. Settings persist across restarts.
 - Display options: Show app icons only, or icons and window titles. If the bottom bar runs out of space, it shrinks window items evenly so all windows stay on one line without scrolling.
 
 When testing, first quit other tools that take over `⌘Tab` to avoid global shortcut conflicts.

@@ -157,6 +157,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 windowsByGroup: windowsByGroup,
                 alwaysVisible: settings.sidebarMode == .always,
                 fullscreen: windowService.fullscreenScreenIDs.contains(id),
+                enabled: settings.sidebarMode != .hidden,
+                showUngrouped: settings.showUngrouped,
+                showCreateGroup: settings.showCreateGroup,
+                verticalAlignment: settings.sidebarVerticalAlignment,
                 position: settings.sidebarPosition,
                 itemDisplayMode: settings.sidebarItemDisplayMode,
                 language: settings.language

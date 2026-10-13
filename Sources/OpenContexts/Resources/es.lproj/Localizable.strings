@@ -1,5 +1,11 @@
 "Always visible" = "Siempre visible";
 "Show on hover" = "Mostrar al pasar el cursor";
+"Off" = "Desactivada";
+"Top" = "Arriba";
+"Center" = "Centro";
+"Vertical alignment" = "Alineación vertical";
+"Show Ungrouped (hidden when empty)" = "Mostrar Sin grupo (se oculta si está vacío)";
+"Show New Group button" = "Mostrar el botón Nuevo grupo";
 "Left" = "Izquierda";
 "Right" = "Derecha";
 "Bottom" = "Abajo";

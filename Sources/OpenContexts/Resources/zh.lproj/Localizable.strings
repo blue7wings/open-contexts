@@ -1,5 +1,11 @@
 "Always visible" = "始终显示";
 "Show on hover" = "悬浮显示";
+"Off" = "关闭";
+"Top" = "上方";
+"Center" = "居中";
+"Vertical alignment" = "垂直位置";
+"Show Ungrouped (hidden when empty)" = "显示未分组（为空时自动隐藏）";
+"Show New Group button" = "显示新建分组按钮";
 "Left" = "左";
 "Right" = "右";
 "Bottom" = "底部";

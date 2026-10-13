@@ -5,10 +5,15 @@ import SwiftUI
 enum SidebarVisibilityMode: String, CaseIterable, Identifiable {
     case always
     case hover
+    case hidden
 
     var id: String { rawValue }
     func title(_ language: AppLanguage) -> String {
-        L10n.text(self == .always ? "Always visible" : "Show on hover", language: language)
+        switch self {
+        case .always: L10n.text("Always visible", language: language)
+        case .hover: L10n.text("Show on hover", language: language)
+        case .hidden: L10n.text("Off", language: language)
+        }
     }
 }
 
@@ -22,6 +27,19 @@ enum SidebarPosition: String, CaseIterable, Identifiable {
         switch self {
         case .left: L10n.text("Left", language: language)
         case .right: L10n.text("Right", language: language)
+        case .bottom: L10n.text("Bottom", language: language)
+        }
+    }
+}
+
+enum SidebarVerticalAlignment: String, CaseIterable, Identifiable {
+    case top, center, bottom
+
+    var id: String { rawValue }
+    func title(_ language: AppLanguage) -> String {
+        switch self {
+        case .top: L10n.text("Top", language: language)
+        case .center: L10n.text("Center", language: language)
         case .bottom: L10n.text("Bottom", language: language)
         }
     }
@@ -42,6 +60,9 @@ final class AppSettings: ObservableObject {
     @Published private(set) var sidebarMode: SidebarVisibilityMode
     @Published private(set) var sidebarPosition: SidebarPosition
     @Published private(set) var sidebarItemDisplayMode: SidebarItemDisplayMode
+    @Published private(set) var sidebarVerticalAlignment: SidebarVerticalAlignment
+    @Published private(set) var showUngrouped: Bool
+    @Published private(set) var showCreateGroup: Bool
     @Published private(set) var language: AppLanguage
     @Published private(set) var allWindowsShortcut: KeyboardShortcut
     @Published private(set) var currentAppShortcut: KeyboardShortcut
@@ -63,6 +84,11 @@ final class AppSettings: ObservableObject {
         currentAppShortcut = conflict ? .currentApp : currentApp
         language = AppLanguage(rawValue: defaults.string(forKey: "language") ?? "") ?? .system
         sidebarMode = SidebarVisibilityMode(rawValue: defaults.string(forKey: "sidebarMode") ?? "") ?? .always
+        sidebarVerticalAlignment = SidebarVerticalAlignment(
+            rawValue: defaults.string(forKey: "sidebarVerticalAlignment") ?? ""
+        ) ?? .center
+        showUngrouped = defaults.object(forKey: "showUngrouped") as? Bool ?? true
+        showCreateGroup = defaults.object(forKey: "showCreateGroup") as? Bool ?? true
         sidebarItemDisplayMode = SidebarItemDisplayMode(
             rawValue: defaults.string(forKey: "sidebarItemDisplayMode") ?? ""
         ) ?? .iconAndTitle
@@ -83,6 +109,21 @@ final class AppSettings: ObservableObject {
     func setSidebarPosition(_ position: SidebarPosition) {
         sidebarPosition = position
         defaults.set(position.rawValue, forKey: "sidebarPosition")
+    }
+
+    func setSidebarVerticalAlignment(_ alignment: SidebarVerticalAlignment) {
+        sidebarVerticalAlignment = alignment
+        defaults.set(alignment.rawValue, forKey: "sidebarVerticalAlignment")
+    }
+
+    func setShowUngrouped(_ show: Bool) {
+        showUngrouped = show
+        defaults.set(show, forKey: "showUngrouped")
+    }
+
+    func setShowCreateGroup(_ show: Bool) {
+        showCreateGroup = show
+        defaults.set(show, forKey: "showCreateGroup")
     }
 
     func setSidebarItemDisplayMode(_ mode: SidebarItemDisplayMode) {
@@ -120,6 +161,22 @@ final class AppSettings: ObservableObject {
         let suite = "OpenContexts.self-check.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suite) else { return false }
         defer { defaults.removePersistentDomain(forName: suite) }
+        let initial = AppSettings(defaults: defaults)
+        guard initial.sidebarMode == .always, initial.sidebarVerticalAlignment == .center,
+              initial.showUngrouped, initial.showCreateGroup else { return false }
+        initial.setSidebarMode(.hidden)
+        initial.setSidebarVerticalAlignment(.top)
+        initial.setShowUngrouped(false)
+        initial.setShowCreateGroup(false)
+        let hidden = AppSettings(defaults: defaults)
+        guard hidden.sidebarMode == .hidden, hidden.sidebarVerticalAlignment == .top,
+              !hidden.showUngrouped, !hidden.showCreateGroup else { return false }
+        initial.setSidebarVerticalAlignment(.bottom)
+        guard AppSettings(defaults: defaults).sidebarVerticalAlignment == .bottom else { return false }
+        defaults.set("invalid", forKey: "sidebarVerticalAlignment")
+        defaults.set("invalid", forKey: "sidebarMode")
+        guard AppSettings(defaults: defaults).sidebarVerticalAlignment == .center,
+              AppSettings(defaults: defaults).sidebarMode == .always else { return false }
         defaults.set(16, forKey: "allWindowsKeyCode")
         defaults.set(17, forKey: "currentAppKeyCode")
         defaults.set("top", forKey: "sidebarPosition")
@@ -182,6 +239,15 @@ struct SettingsView: View {
             }
             .pickerStyle(.segmented)
 
+            Toggle(L10n.text("Show Ungrouped (hidden when empty)", language: language), isOn: Binding(
+                get: { settings.showUngrouped },
+                set: settings.setShowUngrouped
+            ))
+            Toggle(L10n.text("Show New Group button", language: language), isOn: Binding(
+                get: { settings.showCreateGroup },
+                set: settings.setShowCreateGroup
+            ))
+
             Picker(L10n.text("Display", language: language), selection: Binding(
                 get: { settings.sidebarItemDisplayMode },
                 set: settings.setSidebarItemDisplayMode
@@ -201,6 +267,18 @@ struct SettingsView: View {
                 }
             }
             .pickerStyle(.segmented)
+
+            if settings.sidebarPosition != .bottom {
+                Picker(L10n.text("Vertical alignment", language: language), selection: Binding(
+                    get: { settings.sidebarVerticalAlignment },
+                    set: settings.setSidebarVerticalAlignment
+                )) {
+                    ForEach(SidebarVerticalAlignment.allCases) { alignment in
+                        Text(alignment.title(language)).tag(alignment)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
 
             Picker(L10n.text("Language", language: language), selection: Binding(
                 get: { settings.language },
