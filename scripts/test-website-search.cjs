@@ -7,8 +7,8 @@ const source = fs.readFileSync(path.join(__dirname, '../website/assets/site.js')
 const sandbox = {
   document: { currentScript: { src: '/assets/site.js' }, documentElement: { lang: 'en' } },
 }
-vm.runInNewContext(source.slice(0, source.indexOf('  const seg ='))
-  + 'globalThis.search = { searchWindows, highlight, MRU0, APPS }; })()', sandbox)
+vm.runInNewContext(source.slice(0, source.indexOf('  const lights ='))
+  + 'globalThis.search = { searchWindows, highlight, MRU0, APPS, barHTML, sidebarDefaults, settingsForm }; })()', sandbox)
 const { searchWindows, highlight, MRU0, APPS } = sandbox.search
 const results = query => Array.from(searchWindows(MRU0, query))
 
@@ -29,4 +29,46 @@ assert.equal(highlight('<img>&"', '<img>'), '<mark>&lt;img&gt;</mark>&amp;&quot;
 assert.equal(highlight('Google Chrome', '.*'), 'Google Chrome')
 APPS.exact = { name: 'Context', title: 'Example' }
 assert.equal(searchWindows([...MRU0, 'exact'], 'context')[0], 'exact')
+
+const { barHTML, sidebarDefaults, settingsForm } = sandbox.search
+const emptyGroups = [{ id: 'u', name: 'Ungrouped', items: [] }, { id: 'c', name: 'Code', items: [] }]
+assert.ok(!barHTML(emptyGroups, {}, 'button').includes('data-g="u"'))
+assert.ok(barHTML(emptyGroups, {}, 'button').includes('data-g="c"'))
+assert.ok(!barHTML([{ ...emptyGroups[0], items: ['chrome'] }], {}, 'button',
+  { ...sidebarDefaults, showUngrouped: false, showCreateGroup: false }).includes('chrome'))
+assert.equal(barHTML([emptyGroups[0]], {}, 'button', { ...sidebarDefaults, showCreateGroup: false }), '')
+assert.match(settingsForm(sidebarDefaults), /min="94" max="376" value="188"/)
+assert.match(settingsForm(sidebarDefaults), /data-v="hidden"/)
+assert.ok(!settingsForm({ ...sidebarDefaults, pos: 'bottom' }).includes('type="range"'))
+assert.match(settingsForm({ ...sidebarDefaults, display: 'icon' }), /data-setting="width" disabled/)
+assert.ok(!settingsForm({ ...sidebarDefaults, page: 'general' }).includes('type="range"'))
+
+// Execute the real key listener so native editing and the held-Option demo cannot regress.
+let keydown
+const state = { sw: { query: 'chr', list: [], sel: 0 }, mru: MRU0 }
+vm.runInNewContext(source.slice(source.indexOf("    window.addEventListener('keydown'"),
+  source.indexOf("    document.addEventListener('keyup'")), {
+  window: { addEventListener: (_, callback) => { keydown = callback } }, st: state,
+  searchWindows, renderSw() {}, step() {}, commit() {}, cancel() {}, openSw() {},
+})
+function press(key, modifiers = {}) {
+  let prevented = false
+  keydown({ key, code: 'Key' + key.toUpperCase(), target: { matches: () => true },
+    preventDefault() { prevented = true }, stopPropagation() {}, ...modifiers })
+  return prevented
+}
+for (const modifier of ['metaKey', 'ctrlKey']) {
+  for (const key of ['a', 'v']) {
+    assert.equal(press(key, { [modifier]: true }), false)
+    assert.equal(state.sw.query, 'chr')
+  }
+}
+assert.equal(press('x'), false)
+assert.equal(press('Backspace'), false)
+assert.equal(state.sw.query, 'chr')
+assert.equal(press('c', { altKey: true }), true)
+assert.equal(state.sw.query, 'chrc')
+assert.equal(press('Backspace', { altKey: true }), true)
+assert.equal(state.sw.query, 'chr')
 console.log('PASS: website search matches app/title terms, ranks results, preserves MRU ties, rejects fuzzy matches, and safely highlights text.')
+console.log('PASS: native paste/select-all/editing, held-Option input, sidebar visibility, and width settings.')

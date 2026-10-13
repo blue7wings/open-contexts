@@ -11,6 +11,9 @@
     position: '应用栏位置', left: '左', right: '右', bottom: '底部', allWin: '所有窗口', curWin: '当前应用窗口',
     access: '辅助功能', granted: '已授权', pin: '固定', hideApp: '隐藏应用', quitApp: '退出应用',
     search: '输入应用名或窗口标题', noMatches: '没有匹配的窗口',
+    off: '关闭', alignment: '垂直位置', top: '上方', center: '居中', width: '侧边栏宽度', reset: '恢复默认',
+    general: '通用', features: '功能', shortcuts: '快捷键', groups: '分组', language: '语言',
+    showUngrouped: '显示未分组（为空时自动隐藏）', showCreateGroup: '显示新建分组按钮',
   } : {
     ungrouped: 'Ungrouped', newGroupName: 'New Group', code: 'Code', team: 'Team',
     settings: 'Settings…', updates: 'Check for Updates…', quit: 'Quit OpenContexts', settingsTitle: 'OpenContexts Settings',
@@ -18,6 +21,9 @@
     position: 'Sidebar position', left: 'Left', right: 'Right', bottom: 'Bottom', allWin: 'All windows', curWin: 'Current app windows',
     access: 'Accessibility', granted: 'Granted', pin: 'Pin', hideApp: 'Hide App', quitApp: 'Quit App',
     search: 'Type an app name or window title', noMatches: 'No matching windows',
+    off: 'Off', alignment: 'Vertical alignment', top: 'Top', center: 'Center', width: 'Sidebar width', reset: 'Restore defaults',
+    general: 'General', features: 'Features', shortcuts: 'Shortcuts', groups: 'Groups', language: 'Language',
+    showUngrouped: 'Show Ungrouped (hidden when empty)', showCreateGroup: 'Show New Group button',
   }
 
   const sq = (fill, extra = '') => `<rect x="4" y="4" width="56" height="56" rx="13" fill="${fill}"${extra}/>`
@@ -57,9 +63,12 @@
     const attrs = tag === 'button' ? ` draggable="true" data-id="${id}" aria-label="${esc(APPS[id].name)}, ${t}"` : ''
     return `<${tag} class="row"${attrs} title="${t}"><span class="ico">${ICON[id]}${b}</span><span class="t">${t}</span></${tag}>`
   }
-  const barHTML = (groups, badges, tag) =>
-    groups.map(g => `<div class="grp" data-g="${g.id}">${esc(g.name)}</div>` + g.items.map(id => rowHTML(id, badges, tag)).join('')).join('')
-    + `<${tag === 'button' ? 'button' : 'div'} class="newgrp" title="${T.newGroupName}">＋<span class="t"> ${T.newGroupName}</span></${tag === 'button' ? 'button' : 'div'}>`
+  const sidebarDefaults = { pos: 'left', display: 'title', mode: 'always', align: 'center', width: 188,
+    showUngrouped: true, showCreateGroup: true, page: 'sidebar' }
+  const barHTML = (groups, badges, tag, settings = sidebarDefaults) =>
+    groups.filter(g => g.id !== 'u' || settings.showUngrouped && g.items.length)
+      .map(g => `<div class="grp" data-g="${g.id}">${esc(g.name)}</div>` + g.items.map(id => rowHTML(id, badges, tag)).join('')).join('')
+    + (settings.showCreateGroup ? `<${tag === 'button' ? 'button' : 'div'} class="newgrp" title="${T.newGroupName}">＋<span class="t"> ${T.newGroupName}</span></${tag === 'button' ? 'button' : 'div'}>` : '')
   function searchWindows(list, query) {
     const tokens = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
     return list.map(id => {
@@ -94,15 +103,26 @@
     `<${tag} class="srow" role="option" data-i="${i}" aria-selected="${i === sel}"><span class="app">${highlight(APPS[id].name, query)}</span>${ICON[id]}<span class="t">${highlight(APPS[id].title, query)}</span></${tag}>`).join('')
   const seg = (k, opts, cur) => `<div class="seg" role="group">${opts.map(([v, label]) =>
     `<button type="button" data-k="${k}" data-v="${v}" aria-pressed="${v === cur}">${label}</button>`).join('')}</div>`
-  const settingsForm = s => `<div class="form"><div class="form-group">
-    <div class="frow"><span>${T.sidebar}</span>${seg('mode', [['always', T.always], ['hover', T.hover]], s.mode)}</div>
-    <div class="frow"><span>${T.display}</span>${seg('display', [['icon', T.icon], ['title', T.iconTitle]], s.display)}</div>
-    <div class="frow"><span>${T.position}</span>${seg('pos', [['left', T.left], ['right', T.right], ['bottom', T.bottom]], s.pos)}</div>
-  </div><div class="form-group">
+  const settingsForm = s => `<div class="form"><nav class="settings-nav" aria-label="${T.settings}">
+    <button type="button" data-k="page" data-v="general" aria-current="${s.page === 'general' ? 'page' : 'false'}">${T.general}</button>
+    <small>${T.features}</small>
+    ${[['sidebar', T.sidebar], ['shortcuts', T.shortcuts]].map(([page, title]) => `<button type="button" data-k="page" data-v="${page}" aria-current="${s.page === page ? 'page' : 'false'}">${title}</button>`).join('')}
+    </nav><div class="settings-content">${s.page === 'general' ? `
+    <div class="frow"><span>${T.language}</span><span class="val">${zh ? '中文' : 'English'}</span></div>
+    <div class="frow"><span>${T.access}</span><span class="val">${T.granted}</span></div>` : s.page === 'shortcuts' ? `
     <div class="frow"><span>${T.allWin}</span><span class="val">⌘Tab</span></div>
-    <div class="frow"><span>${T.curWin}</span><span class="val">⌘\`</span></div>
-    <div class="frow"><span>${T.access}</span><span class="val">${T.granted}</span></div>
-  </div></div>`
+    <div class="frow"><span>${T.curWin}</span><span class="val">⌘\`</span></div>` : `
+    <div class="frow"><span>${T.sidebar}</span>${seg('mode', [['always', T.always], ['hover', T.hover], ['hidden', T.off]], s.mode)}</div>
+    <div class="frow"><span>${T.position}</span>${seg('pos', [['left', T.left], ['right', T.right], ['bottom', T.bottom]], s.pos)}</div>
+    ${s.pos !== 'bottom' ? `<div class="frow"><span>${T.alignment}</span>${seg('align', [['top', T.top], ['center', T.center], ['bottom', T.bottom]], s.align)}</div>` : ''}
+    <div class="frow"><span>${T.display}</span>${seg('display', [['icon', T.icon], ['title', T.iconTitle]], s.display)}</div>
+    ${s.pos !== 'bottom' ? `<div class="frow"><label for="sidebar-width-${s.mock ? 'mock' : 'demo'}">${T.width}</label><div class="width-control">
+      <input id="sidebar-width-${s.mock ? 'mock' : 'demo'}" type="range" min="94" max="376" value="${s.width}" data-setting="width" ${s.display === 'icon' ? 'disabled' : ''}>
+      <button type="button" data-act="reset-width" aria-label="${T.reset}" title="${T.reset}" ${s.display === 'icon' ? 'disabled' : ''}>↺</button></div></div>` : ''}
+    <div class="frow"><span>${T.groups}</span><div class="group-options">
+      <label><input type="checkbox" data-setting="showUngrouped" ${s.showUngrouped ? 'checked' : ''}>${T.showUngrouped}</label>
+      <label><input type="checkbox" data-setting="showCreateGroup" ${s.showCreateGroup ? 'checked' : ''}>${T.showCreateGroup}</label>
+    </div></div>`}</div></div>`
 
   const lights = (close = '') => `<span class="lights"><i class="${close}"></i><i></i><i></i></span>`
   const titlebar = (title, cls = '') => `<div class="titlebar ${cls}">${lights()}<span class="ttl">${esc(title)}</span></div>`
@@ -141,7 +161,7 @@ Building for production...
     let st
     const reset = () => {
       st = { mru: [...MRU0], min: new Set(['slack', 'claude', 'chatgpt', 'notes']), badges: badges0(), groups: groups0(),
-        pos: 'left', display: 'title', mode: 'always', front: 'terminal', settings: false, sw: null, menu: false, drag: null }
+        ...sidebarDefaults, front: 'terminal', settings: false, sw: null, menu: false, drag: null }
     }
     reset()
 
@@ -149,7 +169,7 @@ Building for production...
         <div class="right"><button class="status-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="OpenContexts">${STATUS_ICON}</button><span>Tue Sep 29&nbsp; 9:41 AM</span></div></div>
       <div class="menu" role="menu" hidden style="right:120px"><button type="button" role="menuitem" data-act="settings">${T.settings}</button><button type="button" role="menuitem" disabled>${T.updates}</button><hr><button type="button" role="menuitem" disabled>${T.quit}</button></div>
       ${Object.keys(APPS).map(id => { const [x, y, w, h] = APPS[id].box; return `<div class="win" data-win="${id}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${BODY[id]()}</div>` }).join('')}
-      <div class="win" data-win="settings" style="left:290px;top:130px;width:540px;height:400px">${titlebar(T.settingsTitle).replace('<i class=""></i>', '<i class="close" title="Close"></i>')}<div class="wbody" data-form></div></div>
+      <div class="win" data-win="settings" style="left:140px;top:60px;width:840px;height:600px">${titlebar(T.settingsTitle).replace('<i class=""></i>', '<i class="close" title="Close"></i>')}<div class="wbody" data-form></div></div>
       <nav class="appbar" aria-label="App bar"></nav>
       <div class="switcher" role="dialog" aria-label="Window switcher" hidden></div>
       <button class="cmd-pill" type="button" data-act="cmdtab"><kbd>⌘ Tab</kbd>${zh ? '打开窗口切换器' : 'Show window switcher'}</button>`
@@ -164,7 +184,7 @@ Building for production...
         const id = w.dataset.win
         if (id === 'settings') {
           w.classList.toggle('is-min', !st.settings)
-          w.style.zIndex = st.front === 'settings' ? 300 : 90
+          w.style.zIndex = st.front === 'settings' ? 900 : 90
         } else {
           w.classList.toggle('is-min', st.min.has(id))
           w.style.zIndex = 100 + order.length - order.indexOf(id)
@@ -172,8 +192,10 @@ Building for production...
         w.classList.toggle('is-inactive', id !== st.front)
       })
       $('[data-front]').textContent = st.front === 'settings' ? 'OpenContexts' : APPS[st.front].name
-      Object.assign(bar.dataset, { pos: st.pos, display: st.display, mode: st.mode })
-      bar.innerHTML = barHTML(st.groups, st.badges, 'button')
+      Object.assign(bar.dataset, { pos: st.pos, display: st.display, mode: st.mode, align: st.align })
+      bar.style.setProperty('--sidebar-width', `${st.width}px`)
+      bar.innerHTML = barHTML(st.groups, st.badges, 'button', st)
+      bar.hidden = st.mode === 'hidden' || !bar.innerHTML
       $('[data-form]').innerHTML = settingsForm(st)
       menu.hidden = !st.menu
       statusBtn.setAttribute('aria-expanded', st.menu)
@@ -182,10 +204,16 @@ Building for production...
     function renderSw() {
       sw.hidden = !st.sw
       $('.cmd-pill').hidden = !!st.sw // the button comes back whenever the switcher closes
-      sw.innerHTML = st.sw ? `<input class="search-query" type="text" aria-label="${T.search}" placeholder="${T.search}" value="${esc(st.sw.query)}" autocomplete="off" spellcheck="false">`
-        + `<div role="listbox" aria-label="${T.allWin}">${swRows(st.sw.list, st.sw.sel, 'button', st.sw.query)}</div>`
-        + (st.sw.list.length ? '' : `<div class="search-query" role="status">${T.noMatches}</div>`) : ''
-      sw.querySelector('input')?.focus({ preventScroll: true })
+      if (!st.sw) { sw.innerHTML = ''; return }
+      if (!sw.querySelector('input')) sw.innerHTML = `<input class="search-query" type="text" aria-label="${T.search}" placeholder="${T.search}" autocomplete="off" spellcheck="false">`
+        + `<div role="listbox" aria-label="${T.allWin}"></div><div class="search-query" role="status"></div>`
+      const input = sw.querySelector('input')
+      if (input.value !== st.sw.query) input.value = st.sw.query
+      sw.querySelector('[role="listbox"]').innerHTML = swRows(st.sw.list, st.sw.sel, 'button', st.sw.query)
+      const status = sw.querySelector('[role="status"]')
+      status.textContent = st.sw.list.length ? '' : T.noMatches
+      status.hidden = !!st.sw.list.length
+      input.focus({ preventScroll: true })
     }
 
     // AppController.activate: restore minimized/hidden, move to front of MRU
@@ -233,7 +261,20 @@ Building for production...
       else if (t.closest('.newgrp')) { st.groups.push({ id: 'g' + st.groups.length + Date.now(), name: T.newGroupName, items: [] }); render() }
       else if (t.closest('.row')) activate(t.closest('.row').dataset.id)
       else if (t.closest('.srow')) { st.sw.sel = +t.closest('.srow').dataset.i; commit() }
+      else if (t.closest('[data-act="reset-width"]')) { st.width = sidebarDefaults.width; render() }
       else if (t.closest('[data-k]')) { const b = t.closest('[data-k]'); st[b.dataset.k] = b.dataset.v; render() }
+    })
+    screen.addEventListener('input', e => {
+      if (e.target.dataset.setting === 'width') {
+        st.width = +e.target.value
+        bar.style.setProperty('--sidebar-width', `${st.width}px`)
+      }
+    })
+    screen.addEventListener('change', e => {
+      if (['showUngrouped', 'showCreateGroup'].includes(e.target.dataset.setting)) {
+        st[e.target.dataset.setting] = e.target.checked
+        render()
+      }
     })
     sw.addEventListener('mouseover', e => {
       const r = e.target.closest('.srow')
@@ -267,6 +308,7 @@ Building for production...
 
     // Keyboard. Browsers never see ⌘Tab (macOS takes it), so ⌥Tab stands in for the held-modifier flow.
     window.addEventListener('keydown', e => {
+      if (e.metaKey || e.ctrlKey) return
       if (e.key === 'Tab' && e.altKey) { e.preventDefault(); e.stopPropagation(); st.sw ? step(e.shiftKey ? -1 : 1) : openSw(e.shiftKey, true); return }
       if (!st.sw) return
       // Option-letter keys produce accented characters on macOS; use the letter for the held-modifier demo.
@@ -276,7 +318,8 @@ Building for production...
       else if (k === 'ArrowUp') step(-1)
       else if (k === 'Enter') commit()
       else if (k === 'Escape') cancel()
-      else if (k === 'Backspace' || !e.isComposing && /^[\x20-\x7e]$/.test(k)) {
+      else if ((e.altKey || !e.target.matches('input.search-query'))
+        && (k === 'Backspace' || !e.isComposing && /^[\x20-\x7e]$/.test(k))) {
         st.sw.query = k === 'Backspace' ? st.sw.query.slice(0, -1) : st.sw.query + k
         st.sw.list = searchWindows(st.mru, st.sw.query)
         st.sw.sel = 0
@@ -308,7 +351,7 @@ Building for production...
       { name: T.ungrouped, items: ['finder'] }, { name: T.code, items: ['terminal', 'chrome', 'claude'] },
       { name: 'AI', items: ['chatgpt'] }, { name: T.team, items: ['slack', 'notes'] }], badges0(), 'div').replace('class="row" title="zsh', 'class="row drop-before" title="zsh')}</div>
       <div class="menu static"><button type="button" tabindex="-1">${T.pin}</button><hr><button type="button" tabindex="-1">${T.hideApp}</button><button type="button" tabindex="-1">${T.quitApp}</button></div></div>`,
-    settings: () => `<div class="mac settings-mock"><div class="win static"><div class="titlebar">${lights()}<span class="ttl">${T.settingsTitle}</span></div>${settingsForm({ mode: 'always', display: 'title', pos: 'bottom' })}</div>
+    settings: () => `<div class="mac settings-mock"><div class="win static"><div class="titlebar">${lights()}<span class="ttl">${T.settingsTitle}</span></div>${settingsForm({ ...sidebarDefaults, mock: true })}</div>
       <div class="appbar static" data-pos="bottom" data-display="title" data-mode="always">${barHTML(groups0().slice(1), badges0(), 'div')}</div></div>`,
   }
 
