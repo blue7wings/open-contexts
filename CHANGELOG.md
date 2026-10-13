@@ -2,6 +2,38 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-13
+
+### Added
+
+- Hide Ungrouped and its windows or the New Group button, with empty Ungrouped groups hidden automatically, and turn off the sidebar while keeping keyboard switching available.
+- Align left and right sidebars to the top, center, or bottom, and adjust their width from 94 to 376 points with a theme-colored slider and a reset button (default: 188 points).
+- Try app-name and window-title search in the website's interactive demo.
+
+### Changed
+
+- Settings now use category navigation and aligned controls across General, Sidebar, and Shortcuts pages.
+- The English and Chinese website pages and interactive demo now show the sidebar's visibility, alignment, width, and group controls.
+
+### Fixed
+
+- The website demo's search field now supports native paste, select-all, and editing without turning Command or Control shortcuts into search text.
+
+### 新增
+
+- 可隐藏「未分组」及其窗口或「新建分组」按钮，空「未分组」自动隐藏，也可关闭侧边栏并继续使用键盘切换器。
+- 左右侧边栏支持上方、居中或下方对齐，并可通过主题色滑块调整为 94 到 376 点，点击重置按钮恢复默认的 188 点。
+- 官网交互演示支持按应用名或窗口标题搜索。
+
+### 调整
+
+- 设置页面采用分类导航，将现有选项整理到通用、侧边栏和快捷键页面，并统一标签与控件的对齐方式。
+- 中英文官网及交互演示同步侧边栏显示、对齐、宽度和分组控制。
+
+### 修复
+
+- 官网演示搜索框支持原生粘贴、全选和编辑，不再把 Command 或 Control 快捷键当作搜索文字。
+
 ## [0.4.0] - 2026-10-10
 
 ### Added
