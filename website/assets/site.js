@@ -127,33 +127,34 @@
   const lights = (close = '') => `<span class="lights"><i class="${close}"></i><i></i><i></i></span>`
   const titlebar = (title, cls = '') => `<div class="titlebar ${cls}">${lights()}<span class="ttl">${esc(title)}</span></div>`
   const BODY = {
-    terminal: () => titlebar(APPS.terminal.title, 'dark') + `<div class="wbody"><div class="term"><span class="d">Last login: Tue Sep 29 09:41:07 on ttys001</span>
+    terminal: () => titlebar(APPS.terminal.title, 'dark') + `<div class="wbody"><div class="term"><span class="d">${zh ? '上次登录：9月29日 周二 09:41:07 ttys001' : 'Last login: Tue Sep 29 09:41:07 on ttys001'}</span>
 <span class="p">~/open-contexts ❯</span> swift build -c release
-Building for production...
+${zh ? '正在构建生产版本...' : 'Building for production...'}
 [42/42] Linking OpenContexts
-<span class="p">Build complete!</span> (18.42s)
+<span class="p">${zh ? '构建完成！' : 'Build complete!'}</span> (18.42s)
 <span class="p">~/open-contexts ❯</span> open dist/OpenContexts.app
 <span class="p">~/open-contexts ❯</span> <span class="cur"></span></div></div>`,
-    finder: () => titlebar('Applications') + `<div class="wbody finder"><aside><h4>Favorites</h4><p>AirDrop</p><p>Recents</p><p class="on">Applications</p><p>Desktop</p><p>Documents</p><p>Downloads</p></aside>
-      <div class="grid">${[['chatgpt', 'ChatGPT'], ['claude', 'Claude'], ['chrome', 'Google Chrome'], ['notes', 'Notes']].map(([k, n]) => `<div>${ICON[k]}${n}</div>`).join('')}
-      <div><img src="${ASSETS}icon.png" alt="" width="48" height="48" style="margin:0 auto 6px">OpenContexts</div><div>${ICON.slack}Slack</div><div>${ICON.terminal}Terminal</div></div></div>`,
+    finder: () => titlebar(zh ? '应用程序' : 'Applications') + `<div class="wbody finder"><aside><h4>${zh ? '个人收藏' : 'Favorites'}</h4><p>${zh ? '隔空投送' : 'AirDrop'}</p><p>${zh ? '最近使用' : 'Recents'}</p><p class="on">${zh ? '应用程序' : 'Applications'}</p><p>${zh ? '桌面' : 'Desktop'}</p><p>${zh ? '文稿' : 'Documents'}</p><p>${zh ? '下载项' : 'Downloads'}</p></aside>
+      <div class="grid">${[['chatgpt', 'ChatGPT'], ['claude', 'Claude'], ['chrome', 'Google Chrome'], ['notes', zh ? '备忘录' : 'Notes']].map(([k, n]) => `<div>${ICON[k]}${n}</div>`).join('')}
+      <div><img src="${ASSETS}icon.png" alt="" width="48" height="48" style="margin:0 auto 6px">OpenContexts</div><div>${ICON.slack}Slack</div><div>${ICON.terminal}${zh ? '终端' : 'Terminal'}</div></div></div>`,
     chrome: () => `<div class="chrome-tabs">${lights()}<div class="chrome-tab"><img src="${ASSETS}icon.png" alt="" width="14" height="14">zshnb/open-contexts</div></div>
       <div class="omni">github.com/zshnb/open-contexts</div><div class="wbody page">zshnb / <b>open-contexts</b><span class="pill-tag">Public</span>
       <h5>Open Contexts</h5><div class="sk" style="width:92%"></div><div class="sk" style="width:84%"></div><div class="sk" style="width:60%"></div>
       <div class="sk" style="width:88%;margin-top:22px"></div><div class="sk" style="width:74%"></div><div class="sk" style="width:80%"></div><div class="sk" style="width:40%"></div></div>`,
-    notes: () => titlebar(APPS.notes.title) + `<div class="wbody notes"><aside><p class="on"><b>Release checklist</b><small>Today · 4 items</small></p><p><b>Group ideas</b><small>Yesterday</small></p><p><b>Shortcuts</b><small>Monday</small></p></aside>
-      <main><h6>Release checklist</h6>☑ Bump VERSION to 0.3.5<br>☑ Update CHANGELOG<br>☐ Tag v0.3.5 and push<br>☐ Check appcast.xml</main></div>`,
-    chatgpt: () => titlebar('ChatGPT') + `<div class="wbody chat"><div class="bubble me">How do I switch between windows, not apps, on a Mac?</div>
-      <div>macOS ⌘Tab switches apps. A window switcher lists every window in most-recently-used order, so one keystroke gets you back to where you were.</div><div class="sk" style="width:70%"></div><div class="sk" style="width:55%"></div></div>`,
-    claude: () => titlebar('Claude') + `<div class="wbody chat" style="background:#faf9f5;height:100%"><div class="bubble me" style="background:#ece9df">Why does ⌘Tab start on the second window?</div>
-      <div>The first window in the list is the one you're already in. Starting on the second one means a quick ⌘Tab always takes you back to the previous window.</div><div class="sk" style="width:66%;background:#ece9df"></div></div>`,
+    notes: () => titlebar(zh ? '全部 iCloud — 12 个备忘录' : APPS.notes.title) + `<div class="wbody notes"><aside><p class="on"><b>${zh ? '发版检查清单' : 'Release checklist'}</b><small>${zh ? '今天 · 4 项' : 'Today · 4 items'}</small></p><p><b>${zh ? '窗口分组灵感' : 'Group ideas'}</b><small>${zh ? '昨天' : 'Yesterday'}</small></p><p><b>${zh ? '快捷键配置' : 'Shortcuts'}</b><small>${zh ? '周一' : 'Monday'}</small></p></aside>
+      <main><h6>${zh ? '发版检查清单' : 'Release checklist'}</h6>☑ ${zh ? '更新 VERSION 至 0.3.5' : 'Bump VERSION to 0.3.5'}<br>☑ ${zh ? '更新 CHANGELOG' : 'Update CHANGELOG'}<br>☐ ${zh ? '打标签 v0.3.5 并推送' : 'Tag v0.3.5 and push'}<br>☐ ${zh ? '检查 appcast.xml' : 'Check appcast.xml'}</main></div>`,
+    chatgpt: () => titlebar('ChatGPT') + `<div class="wbody chat"><div class="bubble me">${zh ? '如何在 Mac 上按窗口而不是按应用切换？' : 'How do I switch between windows, not apps, on a Mac?'}</div>
+      <div>${zh ? 'macOS 自带的 ⌘Tab 只切换应用。窗口切换器按最近使用顺序列出每个独立窗口，按一次键即可回到刚才的窗口。' : 'macOS ⌘Tab switches apps. A window switcher lists every window in most-recently-used order, so one keystroke gets you back to where you were.'}</div><div class="sk" style="width:70%"></div><div class="sk" style="width:55%"></div></div>`,
+    claude: () => titlebar('Claude') + `<div class="wbody chat" style="background:#faf9f5;height:100%"><div class="bubble me" style="background:#ece9df">${zh ? '为什么按 ⌘Tab 默认选中第二个窗口？' : 'Why does ⌘Tab start on the second window?'}</div>
+      <div>${zh ? '列表第一项是你当前正在使用的窗口。默认选中第二项意味着轻按一次 ⌘Tab 就能立即切回上一个窗口。' : "The first window in the list is the one you're already in. Starting on the second one means a quick ⌘Tab always takes you back to the previous window."}</div><div class="sk" style="width:66%;background:#ece9df"></div></div>`,
     slack: () => titlebar(APPS.slack.title) + `<div class="wbody slack"><aside><b>Open Contexts</b># general<div class="on"># releases</div># design<br># support</aside><main>
-      <div class="msg"><span class="av" style="background:#e8a33d"></span><div><b>Mia</b><br>v0.3.5 is out: five interface languages 🎉</div></div>
-      <div class="msg"><span class="av" style="background:#5b8def"></span><div><b>Leo</b><br>Bottom bar now shrinks items evenly. Every window fits on one line.</div></div>
+      <div class="msg"><span class="av" style="background:#e8a33d"></span><div><b>Mia</b><br>${zh ? 'v0.3.5 已发布：支持五种界面语言 🎉' : 'v0.3.5 is out: five interface languages 🎉'}</div></div>
+      <div class="msg"><span class="av" style="background:#5b8def"></span><div><b>Leo</b><br>${zh ? '底部应用栏现已支持均匀缩放，所有窗口一行排开。' : 'Bottom bar now shrinks items evenly. Every window fits on one line.'}</div></div>
       <div class="msg"><span class="av" style="background:#3fb68b"></span><div style="flex:1"><b>Ana</b><div class="sk" style="width:80%"></div><div class="sk" style="width:50%"></div></div></div></main></div>`,
   }
 
   function mountDemo(viewport) {
+    viewport.setAttribute('data-nosnippet', '')
     const screen = viewport.querySelector('.screen')
     const ro = new ResizeObserver(() => viewport.style.setProperty('--s', viewport.clientWidth / 1120))
     ro.observe(viewport)
@@ -165,8 +166,8 @@ Building for production...
     }
     reset()
 
-    screen.innerHTML = `<div class="menubar"><b data-front></b><span>File</span><span>Edit</span><span>View</span><span>Window</span><span>Help</span>
-        <div class="right"><button class="status-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="OpenContexts">${STATUS_ICON}</button><span>Tue Sep 29&nbsp; 9:41 AM</span></div></div>
+    screen.innerHTML = `<div class="menubar"><b data-front></b><span>${zh ? '文件' : 'File'}</span><span>${zh ? '编辑' : 'Edit'}</span><span>${zh ? '显示' : 'View'}</span><span>${zh ? '窗口' : 'Window'}</span><span>${zh ? '帮助' : 'Help'}</span>
+        <div class="right"><button class="status-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="OpenContexts">${STATUS_ICON}</button><span>${zh ? '9月29日 周二 9:41' : 'Tue Sep 29&nbsp; 9:41 AM'}</span></div></div>
       <div class="menu" role="menu" hidden style="right:120px"><button type="button" role="menuitem" data-act="settings">${T.settings}</button><button type="button" role="menuitem" disabled>${T.updates}</button><hr><button type="button" role="menuitem" disabled>${T.quit}</button></div>
       ${Object.keys(APPS).map(id => { const [x, y, w, h] = APPS[id].box; return `<div class="win" data-win="${id}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${BODY[id]()}</div>` }).join('')}
       <div class="win" data-win="settings" style="left:140px;top:60px;width:840px;height:600px">${titlebar(T.settingsTitle).replace('<i class=""></i>', '<i class="close" title="Close"></i>')}<div class="wbody" data-form></div></div>
@@ -361,7 +362,7 @@ Building for production...
       <div class="appbar static" data-pos="bottom" data-display="title" data-mode="always">${barHTML(groups0().slice(1), badges0(), 'div')}</div></div>`,
   }
 
-  document.querySelectorAll('[data-mock]').forEach(el => { el.innerHTML = MOCKS[el.dataset.mock](); el.inert = true })
+  document.querySelectorAll('[data-mock]').forEach(el => { el.setAttribute('data-nosnippet', ''); el.innerHTML = MOCKS[el.dataset.mock](); el.inert = true })
   const vp = document.querySelector('.demo-viewport')
   if (vp) mountDemo(vp)
 

@@ -238,7 +238,7 @@ kbd,.kbd{font-family:var(--font-body);font-size:.8em;font-weight:540;display:inl
 .footer-legal{margin-top:48px;padding-top:24px;border-top:1px solid var(--separator);font-size:.8125rem;color:var(--text-secondary)}
 @media (max-width:760px){.footer-inner{grid-template-columns:1fr}.footer-cols{grid-template-columns:repeat(3,1fr)}}
 
-.js [data-reveal]{opacity:0;transform:translateY(16px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
+.js [data-reveal]{opacity:1;transform:none;transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
 .js [data-reveal].is-in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.001ms!important;animation-duration:.001ms!important}[data-reveal]{opacity:1;transform:none}}
 @media (max-width:600px){:root{--text-display-xl:2.5rem;--text-display:1.875rem;--text-body-lg:1.0625rem}.section{padding-block:64px}}
@@ -389,10 +389,10 @@ input.search-query:focus{outline:none;border-color:#777}
 .notes h6{font-size:18px;margin-bottom:6px}
 
 /* static mocks in feature sections */
-.switcher.static,.appbar.static,.menu.static,.win.static{position:relative;left:auto;right:auto;top:auto;bottom:auto;translate:none;transform:none;opacity:1}
+.switcher.static,.appbar.static,.menu.static,.win.static{position:relative;left:auto;right:auto;top:auto;bottom:auto;z-index:auto;translate:none;transform:none;opacity:1}
 .switcher.static{width:100%;max-width:600px;margin-inline:auto}
 .appbar.static{border-radius:10px;max-height:none;overflow:visible}
-.mock-wall{position:relative;border-radius:var(--radius-card);padding:48px 40px;overflow:hidden;
+.mock-wall{position:relative;isolation:isolate;border-radius:var(--radius-card);padding:48px 40px;overflow:hidden;
   background:radial-gradient(90% 80% at 100% 0%,#7d8cff 0%,transparent 60%),radial-gradient(120% 90% at 0% 100%,#f7a8c8 0%,transparent 55%),linear-gradient(160deg,#3b6fe0,#8a6ef0 55%,#e98bb6);box-shadow:var(--shadow-lg)}
 .groups-mock{position:relative;padding:24px 150px 24px 24px}
 .groups-mock .appbar.static{width:188px}
