@@ -11,10 +11,10 @@ public struct SidebarHoverState: Equatable {
 
     @discardableResult
     public mutating func update(pointer: CGPoint, edgeFrame: CGRect, expandedFrame: CGRect,
-                                dragging: Bool, now: TimeInterval,
+                                dragging: Bool, menuOpen: Bool = false, now: TimeInterval,
                                 collapseDelay: TimeInterval = 0.12) -> Bool {
         let previous = isExpanded
-        if dragging {
+        if dragging || menuOpen {
             isExpanded = true
             outsideSince = nil
         } else if !isExpanded {

@@ -39,6 +39,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     private var language: AppLanguage = .system
     private var hoverState = SidebarHoverState()
     private var hoverTimer: Timer?
+    private var contextMenuOpen = false
     private var dragging = false
     private var sourceDragging = false
     private var destinationDragging = false
@@ -264,6 +265,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
                 delete.target = self
                 delete.representedObject = group.id
                 menu.items = [rename, delete]
+                menu.delegate = self
                 header.menu = menu
             }
             stack.addArrangedSubview(header)
@@ -318,7 +320,19 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         layoutDocumentView()
     }
 
+    func menuWillOpen(_ menu: NSMenu) {
+        contextMenuOpen = true
+        updateHover(pointer: NSEvent.mouseLocation, now: ProcessInfo.processInfo.systemUptime)
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        contextMenuOpen = false
+        updateHover(pointer: NSEvent.mouseLocation, now: ProcessInfo.processInfo.systemUptime)
+    }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
+        // Only window menus use their title as an ID; group menus keep their static items.
+        guard !menu.title.isEmpty else { return }
         menu.removeAllItems()
         guard let target = renderedWindows.values.joined().first(where: { $0.id == menu.title }) else { return }
         let processID = target.processID
@@ -491,7 +505,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         guard enabled, hasVisibleContent else { return }
         let frames = sidebarFrames()
         if hoverState.update(pointer: pointer, edgeFrame: frames.edge, expandedFrame: frames.expanded,
-                             dragging: dragging, now: now) {
+                             dragging: dragging, menuOpen: contextMenuOpen, now: now) {
             layoutPanel()
         }
     }
@@ -898,6 +912,33 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         })?.menu else { return }
         menuNeedsUpdate(menu)
         closeMenuWindow(menu.items[1])
+    }
+
+    fileprivate func smokeContextMenuKeepsExpanded(group: Bool) -> Bool {
+        guard let rowIndex = sidebarRows.lastIndex(where: {
+            if case .group = $0.style { return group }
+            return !group
+        }) else { return false }
+        let row = sidebarRows[rowIndex]
+        guard let menu = row.menu, menu.delegate === self else { return false }
+        let frames = sidebarFrames()
+        updateHover(pointer: CGPoint(x: frames.edge.midX, y: frames.edge.midY), now: 0)
+        let outside = CGPoint(x: frames.expanded.midX, y: frames.expanded.maxY + 40)
+        var stayedVisible = false
+        let timer = Timer(timeInterval: 0.25, repeats: false) { _ in
+            MainActor.assumeIsolated {
+                self.updateHover(pointer: outside, now: 1)
+                self.updateHover(pointer: outside, now: 1.25)
+                stayedVisible = self.isVisible
+                self.sidebarRows[rowIndex].menu?.cancelTrackingWithoutAnimation()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        menu.popUp(positioning: nil, at: CGPoint(x: row.bounds.midX, y: row.bounds.midY), in: row)
+        timer.invalidate()
+        updateHover(pointer: outside, now: 2)
+        updateHover(pointer: outside, now: 2.25)
+        return stayedVisible && !isVisible && menu.items.count >= 2
     }
 
     fileprivate var smokeRowHoverAppearanceIsValid: Bool {
@@ -2001,6 +2042,18 @@ enum PanelSmokeCheck {
         guard closedWindowIDs == [windows[1].id] else {
             sidebar.close()
             return fail("sidebar close did not target the selected closable window")
+        }
+
+        let menuGroup = WindowGroup(id: "menu-group", name: "Menu Group")
+        for position in SidebarPosition.allCases {
+            sidebar.update(groups: [menuGroup], windowsByGroup: [menuGroup.id: [windows[0]]],
+                           alwaysVisible: false, fullscreen: false, position: position)
+            for group in [false, true] {
+                guard sidebar.smokeContextMenuKeepsExpanded(group: group) else {
+                    sidebar.close()
+                    return fail("sidebar context menu lifecycle mismatch: position=\(position.rawValue) group=\(group)")
+                }
+            }
         }
 
         for (value, text, diameter) in [

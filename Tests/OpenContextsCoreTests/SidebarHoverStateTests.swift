@@ -44,4 +44,24 @@ final class SidebarHoverStateTests: XCTestCase {
                                    expandedFrame: expanded, dragging: false, now: 3.12))
         XCTAssertFalse(state.isExpanded)
     }
+
+    func testContextMenuKeepsExpandedAndRestartsCollapseDelayAfterClosing() {
+        var state = SidebarHoverState(isExpanded: true)
+        let outside = CGPoint(x: 700, y: 400)
+        XCTAssertFalse(state.update(pointer: outside, edgeFrame: edge, expandedFrame: expanded,
+                                    dragging: false, now: 0))
+        for now in [0.2, 1, 5] {
+            XCTAssertFalse(state.update(pointer: outside, edgeFrame: edge, expandedFrame: expanded,
+                                        dragging: false, menuOpen: true, now: now))
+            XCTAssertTrue(state.isExpanded)
+        }
+        XCTAssertFalse(state.update(pointer: outside, edgeFrame: edge, expandedFrame: expanded,
+                                    dragging: false, now: 6))
+        XCTAssertFalse(state.update(pointer: outside, edgeFrame: edge, expandedFrame: expanded,
+                                    dragging: false, now: 6.1))
+        XCTAssertTrue(state.isExpanded)
+        XCTAssertTrue(state.update(pointer: outside, edgeFrame: edge, expandedFrame: expanded,
+                                   dragging: false, now: 6.13))
+        XCTAssertFalse(state.isExpanded)
+    }
 }
