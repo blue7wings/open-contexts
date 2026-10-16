@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-16
+
+### Fixed
+
+- Keep the sidebar visible while a window or group context menu is open, so moving the pointer into the menu no longer dismisses it.
+
+### 修复
+
+- 修复鼠标移入右键菜单时侧边栏和菜单一起消失的问题，窗口和分组的右键菜单均可正常操作。
+
 ## [0.4.1] - 2026-10-13
 
 ### Added
