@@ -47,6 +47,7 @@
   "description": "免费开源的 Mac 窗口切换器，按应用名或窗口标题搜索，快速定位窗口。支持 ⌘Tab 切换、侧边栏、底部 Dock 和保存窗口分组。",
   "applicationCategory": "UtilitiesApplication",
   "operatingSystem": "macOS 13.0 or later",
+  "softwareVersion": "0.4.2",
   "url": "https://opencontexts.zshnb.com/zh/",
   "downloadUrl": "https://github.com/zshnb/open-contexts/releases/latest",
   "image": "https://opencontexts.zshnb.com/assets/og.png",
@@ -58,23 +59,6 @@
     "priceCurrency": "USD"
   },
   "codeRepository": "https://github.com/zshnb/open-contexts"
-}
-</script>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "inLanguage": "zh-Hans",
-  "mainEntity": [
-    {"@type": "Question", "name": "如何搜索应用名或窗口标题？", "acceptedAnswer": {"@type": "Answer", "text": "打开窗口切换器后保持按住修饰键，输入应用名或窗口标题。搜索忽略大小写，每个词匹配连续文本，空格分隔的词可组合匹配应用名和标题。Backspace 删除，删空恢复列表；松开修饰键切换，无匹配时只关闭。仅接受可打印 ASCII，不支持中文输入、拼音、模糊搜索或单个浏览器标签页搜索。"}},
-    {"@type": "Question", "name": "Open Contexts 免费吗？", "acceptedAnswer": {"@type": "Answer", "text": "是的。Open Contexts 基于 Apache License 2.0 免费开源，包含全部功能，没有试用期、账号或订阅。"}},
-    {"@type": "Question", "name": "Open Contexts 是 Mac 上的 Alt-Tab 吗？", "acceptedAnswer": {"@type": "Answer", "text": "是的。Windows 上的 Alt-Tab 在窗口之间切换，而 macOS 的 ⌘Tab 在应用之间切换。Open Contexts 接管 ⌘Tab，按最近使用顺序列出每一个窗口；⌘` 只列出当前应用的窗口。"}},
-    {"@type": "Question", "name": "Open Contexts 和 Contexts 有什么区别？", "acceptedAnswer": {"@type": "Answer", "text": "Open Contexts 是付费应用 Contexts 中应用栏和窗口切换器的开源复刻，并新增了 Contexts 不支持的自定义分组保存。支持按住切换器修饰键搜索应用名与窗口标题，不支持触控板手势。"}},
-    {"@type": "Question", "name": "和 AltTab 等其他窗口切换器相比有什么不同？", "acceptedAnswer": {"@type": "Answer", "text": "Open Contexts 用紧凑的列表显示每个窗口的应用名、图标和标题，而不是缩略图网格；同时搭配常驻的应用栏，可以把窗口整理进保存的分组。"}},
-    {"@type": "Question", "name": "支持哪些 Mac 和 macOS 版本？", "acceptedAnswer": {"@type": "Answer", "text": "需要 macOS 13 Ventura 或更高版本，以 DMG 形式提供。"}},
-    {"@type": "Question", "name": "为什么需要辅助功能权限？", "acceptedAnswer": {"@type": "Answer", "text": "辅助功能权限让 Open Contexts 能够发现和切换窗口，并处理键盘快捷键。未授权或应用未运行时，Open Contexts 不会接管 ⌘Tab。"}},
-    {"@type": "Question", "name": "我的窗口分组保存在哪里？", "acceptedAnswer": {"@type": "Answer", "text": "分组和窗口位置保存在本地的 ~/Library/Application Support/OpenContexts/groups.json，不会上传。"}}
-  ]
 }
 </script>
 </head>
@@ -296,7 +280,7 @@
         <p>免费开源的 macOS 窗口切换器与应用栏。</p>
       </div>
       <div class="footer-cols">
-        <div><h2>产品</h2><ul><li><a href="#features">功能</a></li><li><a href="compare/">全工具对比</a></li><li><a href="compare/open-contexts-vs-alttab/">Open Contexts 对比 AltTab</a></li><li><a href="compare/open-contexts-vs-contexts/">Open Contexts 对比 Contexts</a></li><li><a href="compare/open-contexts-vs-dockdoor/">Open Contexts 对比 DockDoor</a></li><li><a href="alternatives/alttab/">AltTab 替代方案</a></li><li><a href="alternatives/contexts/">Contexts 替代方案</a></li><li><a href="#download">下载</a></li><li><a href="https://github.com/zshnb/open-contexts/blob/main/CHANGELOG.md">更新日志</a></li></ul></div>
+        <div><h2>产品</h2><ul><li><a href="#features">功能</a></li><li><a href="compare/">全工具对比</a></li><li><a href="compare/open-contexts-vs-alttab/">Open Contexts 对比 AltTab</a></li><li><a href="compare/open-contexts-vs-contexts/">Open Contexts 对比 Contexts</a></li><li><a href="compare/open-contexts-vs-dockdoor/">Open Contexts 对比 DockDoor</a></li><li><a href="#download">下载</a></li><li><a href="https://github.com/zshnb/open-contexts/blob/main/CHANGELOG.md">更新日志</a></li></ul></div>
         <div><h2>支持</h2><ul><li><a href="/zh/guides/switch-between-windows-on-mac/#window-search">搜索窗口</a></li><li><a href="guides/switch-between-windows-on-mac/">Mac 窗口切换指南</a></li><li><a href="guides/mac-dock-alternative/">Mac Dock 与侧边栏指南</a></li><li><a href="#faq">常见问题</a></li><li><a href="https://github.com/zshnb/open-contexts/issues">反馈问题</a></li><li><a href="https://github.com/zshnb/open-contexts">GitHub</a></li></ul></div>
         <div><h2>法律</h2><ul><li><a href="/zh/privacy/">隐私政策</a></li><li><a href="/zh/terms/">服务条款</a></li><li><a href="https://github.com/zshnb/open-contexts/blob/main/LICENSE">Apache 2.0</a></li></ul></div>
       </div>
