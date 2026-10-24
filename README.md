@@ -43,6 +43,7 @@ The window switcher displays windows in most recently used order. You can contin
 | Keyboard switcher | Defaults to `⌘Tab` for all windows and `Command + backtick` for the current app; both shortcuts are customizable in Settings; supports Shift for reverse switching, arrow keys, `Esc`, and releasing a shortcut modifier to confirm |
 | Sidebar shortcut | Press `⌃⌘B` to keep the sidebar open on the screen under the pointer, even when set to Off; move the pointer into the sidebar and away, press again, or press `Esc` to return to its visibility setting. Customize or disable it in Settings → Shortcuts |
 | Window search | Search by app name or window title: hold the switcher modifier, type, then release to switch; matches are highlighted in yellow |
+| Active window highlight | Keeps the current window highlighted in the app bar with the same blue background and white text as the window switcher |
 | Window activation | Attempts to restore minimized or hidden windows when activated |
 | Window information | Displays app icons, window titles, and notification badges readable from the system Dock |
 | Native macOS app | Built with Swift, AppKit, and SwiftUI; app updates use Sparkle |

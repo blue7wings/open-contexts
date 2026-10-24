@@ -56,6 +56,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     private var iconRetrySchedules: [String: IconRetrySchedule] = [:]
     private var iconCache: [String: NSImage] = [:]
     private var renderedBadges: [String: String] = [:]
+    private var focusedWindowID: String?
     private var positionConstraints: [NSLayoutConstraint] = []
     private var stackCrossAxisConstraint: NSLayoutConstraint?
     private var bottomItemWidthConstraints: [NSLayoutConstraint] = []
@@ -301,6 +302,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
                     onClick: { [weak self] in self?.onActivate(window.id) },
                     onDraggingChanged: { [weak self] in self?.sourceDraggingChanged($0) }
                 )
+                row.setSelected(window.id == focusedWindowID)
                 let menu = NSMenu(title: window.id)
                 menu.autoenablesItems = false
                 menu.delegate = self
@@ -414,6 +416,14 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
         guard badges != renderedBadges else { return }
         renderedBadges = badges
         sidebarRows.forEach { $0.setBadge($0.badgeKey.flatMap { badges[$0] }) }
+    }
+
+    func updateFocusedWindow(_ id: String?) {
+        guard focusedWindowID != id else { return }
+        focusedWindowID = id
+        for row in sidebarRows {
+            if case let .window(rowID, _) = row.style { row.setSelected(rowID == id) }
+        }
     }
 
     private func retryApplicationIcon(for window: WindowInfo, iconKey: String) {
@@ -964,6 +974,13 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
             .allSatisfy(\.smokeHoverAppearanceIsValid)
     }
 
+    fileprivate var smokeSelectedWindowIDs: [String] {
+        sidebarRows.compactMap { row in
+            guard case let .window(id, _) = row.style, row.isAccessibilitySelected() else { return nil }
+            return id
+        }
+    }
+
     fileprivate var smokePositionLayoutIsValid: Bool {
         positionConstraints.count == 4 && positionConstraints.allSatisfy(\.isActive)
             && stackCrossAxisConstraint?.isActive == true
@@ -1399,6 +1416,8 @@ private final class SidebarItemView: NSView, NSDraggingSource {
     private var mouseDownPoint: NSPoint?
     private var dragging = false
     private var trackingArea: NSTrackingArea?
+    private var selected = false
+    private var hovered = false
 
     init(title: String, icon: NSImage? = nil, iconKey: String? = nil,
          badgeKey: String? = nil, badge: String? = nil,
@@ -1493,6 +1512,13 @@ private final class SidebarItemView: NSView, NSDraggingSource {
         constraints.append(heightAnchor.constraint(equalToConstant: height))
         NSLayoutConstraint.activate(constraints)
         setBadge(badge)
+        updateAppearance()
+    }
+
+    func setSelected(_ selected: Bool) {
+        guard self.selected != selected else { return }
+        self.selected = selected
+        updateAppearance()
     }
 
     func setIcon(_ icon: NSImage) {
@@ -1563,8 +1589,11 @@ private final class SidebarItemView: NSView, NSDraggingSource {
             let entered = layer?.backgroundColor == appAccentColor.cgColor
                 && titleLabel.textColor == .white
             setHovered(false)
-            return entered && layer?.backgroundColor == NSColor.clear.cgColor
-                && titleLabel.textColor == .labelColor
+            return entered && layer?.backgroundColor == (selected ? appAccentColor : NSColor.clear).cgColor
+                && titleLabel.textColor == (selected ? .white : .labelColor)
+                && titleLabel.font == .systemFont(ofSize: 13, weight: selected ? .medium : .regular)
+                && layer?.cornerRadius == (selected ? 6 : 7)
+                && isAccessibilitySelected() == selected
         }
     }
 
@@ -1653,9 +1682,18 @@ private final class SidebarItemView: NSView, NSDraggingSource {
     }
 
     private func setHovered(_ hovered: Bool) {
+        self.hovered = hovered
+        updateAppearance()
+    }
+
+    private func updateAppearance() {
         guard case .window = style else { return }
-        layer?.backgroundColor = hovered ? appAccentColor.cgColor : NSColor.clear.cgColor
-        titleLabel.textColor = hovered ? .white : .labelColor
+        let highlighted = selected || hovered
+        layer?.backgroundColor = highlighted ? appAccentColor.cgColor : NSColor.clear.cgColor
+        layer?.cornerRadius = selected ? 6 : 7
+        titleLabel.textColor = highlighted ? .white : .labelColor
+        titleLabel.font = .systemFont(ofSize: 13, weight: selected ? .medium : .regular)
+        setAccessibilitySelected(selected)
     }
 }
 
@@ -1920,6 +1958,7 @@ private func fallbackApplicationIcon(for window: WindowInfo) -> NSImage {
 enum PanelSmokeCheck {
     static func run() -> Bool {
         _ = NSApplication.shared
+        guard WindowService.focusSelfCheck() else { return fail("focused window changes were not published") }
         guard WindowService.closingSelfCheck() else { return fail("window close affected another window") }
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return false }
         guard SidebarWidthSlider.selfCheck() else { return fail("sidebar width slider mismatch") }
@@ -1966,6 +2005,39 @@ enum PanelSmokeCheck {
               let threeHeight = measuredHeights[3], zeroHeight < oneHeight, oneHeight < threeHeight else {
             sidebar.close()
             return fail("sidebar natural heights did not grow: \(measuredHeights)")
+        }
+        for position in SidebarPosition.allCases {
+            for displayMode in SidebarItemDisplayMode.allCases {
+                sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: Array(windows.prefix(3))],
+                               alwaysVisible: true, fullscreen: false, position: position,
+                               itemDisplayMode: displayMode)
+                sidebar.updateFocusedWindow(windows[0].id)
+                let identity = sidebar.smokeWindowIdentity(windows[0].id)
+                guard sidebar.smokeSelectedWindowIDs == [windows[0].id], sidebar.smokeRowHoverAppearanceIsValid else {
+                    sidebar.close()
+                    return fail("active sidebar window did not retain switcher styling after mouse exit")
+                }
+                sidebar.updateFocusedWindow(windows[1].id)
+                guard sidebar.smokeSelectedWindowIDs == [windows[1].id], sidebar.smokeRowHoverAppearanceIsValid,
+                      sidebar.smokeWindowIdentity(windows[0].id) == identity else {
+                    sidebar.close()
+                    return fail("sidebar focus change rebuilt rows or left stale highlighting")
+                }
+                sidebar.smokeBeginDrag()
+                sidebar.updateFocusedWindow(windows[2].id)
+                sidebar.smokeEndDrag()
+                guard sidebar.smokeSelectedWindowIDs == [windows[2].id], sidebar.smokeRowHoverAppearanceIsValid else {
+                    sidebar.close()
+                    return fail("sidebar row rebuild lost active highlighting")
+                }
+                for focus in ["missing", nil] {
+                    sidebar.updateFocusedWindow(focus)
+                    guard sidebar.smokeSelectedWindowIDs.isEmpty, sidebar.smokeRowHoverAppearanceIsValid else {
+                        sidebar.close()
+                        return fail("sidebar retained an inactive window highlight")
+                    }
+                }
+            }
         }
         let visibilityGroups = groups + [WindowGroup(id: "empty-group", name: "Empty")]
         sidebar.update(groups: visibilityGroups, windowsByGroup: [:],

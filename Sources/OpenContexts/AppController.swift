@@ -83,6 +83,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self?.sidebars.values.forEach { $0.updateBadges(badges) }
         }.store(in: &cancellables)
 
+        windowService.$focusedWindowID.removeDuplicates().sink { [weak self] id in
+            self?.sidebars.values.forEach { $0.updateFocusedWindow(id) }
+        }.store(in: &cancellables)
+
         windowService.$hasAccessibility.removeDuplicates().sink { [weak self] trusted in
             guard let self else { return }
             if trusted { _ = self.shortcuts.start() } else { self.shortcuts.stop() }
@@ -173,6 +177,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 language: settings.language
             )
             panel.updateBadges(windowService.appBadges)
+            panel.updateFocusedWindow(windowService.focusedWindowID)
         }
     }
 

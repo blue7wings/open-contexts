@@ -11,7 +11,7 @@ final class WindowService: ObservableObject {
     @Published private(set) var hasAccessibility = false
     @Published private(set) var fullscreenScreenIDs: Set<UInt32> = []
 
-    var focusedWindowID: String? { focusedID }
+    @Published private(set) var focusedWindowID: String?
     private(set) var hasCompletedInitialScan = false
 
     private final class WeakWindow {
@@ -58,7 +58,6 @@ final class WindowService: ObservableObject {
     private var tracked: [TrackedWindow] = []
     private var localWindows: [String: WeakWindow] = [:]
     private var externalFocusedID: String?
-    private var focusedID: String?
     private var timer: Timer?
     private var scanInFlight = false
     private var lastBadgeScanAt = -Double.infinity
@@ -330,6 +329,23 @@ final class WindowService: ObservableObject {
         return true
     }
 
+    static func focusSelfCheck() -> Bool {
+        _ = NSApplication.shared
+        let service = WindowService()
+        service.tracked = [TrackedWindow(id: "A", element: AXUIElementCreateApplication(0),
+                                        info: WindowInfo(id: "A", appID: "check", appName: "Check",
+                                                         title: "A", processID: 0))]
+        var updates: [String?] = []
+        let subscription = service.$focusedWindowID.sink { updates.append($0) }
+        defer { subscription.cancel() }
+        for focus in ["A", nil, "A"] {
+            service.externalFocusedID = focus
+            service.publishWindows()
+            guard service.focusedWindowID == focus, service.windows.map(\.id) == ["A"] else { return false }
+        }
+        return updates == [nil, "A", nil, "A"]
+    }
+
     private func publishWindows() {
         localWindows = localWindows.filter { $0.value.value != nil }
         let localInfos = localWindows.compactMap { id, reference -> WindowInfo? in
@@ -348,7 +364,8 @@ final class WindowService: ObservableObject {
         let localFocusedID = NSApp.isActive
             ? localWindows.first { $0.value.value?.isKeyWindow == true }?.key
             : nil
-        focusedID = localFocusedID ?? externalFocusedID
+        let focusedID = localFocusedID ?? externalFocusedID
+        if focusedWindowID != focusedID { focusedWindowID = focusedID }
         if let focusedID, let index = orderedIDs.firstIndex(of: focusedID), index != 0 {
             orderedIDs.remove(at: index)
             orderedIDs.insert(focusedID, at: 0)
