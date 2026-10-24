@@ -48,11 +48,15 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func configureShortcuts() {
-        shortcuts.configure(allWindows: settings.allWindowsShortcut, currentApp: settings.currentAppShortcut)
+        shortcuts.configure(allWindows: settings.allWindowsShortcut, currentApp: settings.currentAppShortcut,
+                            sidebar: settings.sidebarShortcut)
         shortcuts.canBegin = { [weak self] currentAppOnly in
             self?.availableWindows(currentAppOnly: currentAppOnly).isEmpty == false
         }
         shortcuts.onAction = { [weak self] action in self?.handle(action) }
+        shortcuts.canDismissSidebar = { [weak self] in
+            self?.sidebars.values.contains(where: { $0.canDismissShortcut }) == true
+        }
     }
 
     private func observeState() {
@@ -94,7 +98,9 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self?.configureMenuBar()
                 if let self {
                     self.shortcuts.configure(allWindows: self.settings.allWindowsShortcut,
-                                             currentApp: self.settings.currentAppShortcut)
+                                             currentApp: self.settings.currentAppShortcut,
+                                             sidebar: self.settings.sidebarShortcut)
+                    if self.settings.sidebarShortcut == nil { self.dismissSidebar() }
                     self.settingsWindow?.title = L10n.text("OpenContexts Settings", language: self.settings.language)
                     if self.currentAppOnly != nil { self.updateSwitchers() }
                 }
@@ -178,7 +184,18 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func handle(_ action: SwitcherAction) {
         switch action {
+        case .toggleSidebar:
+            finishSwitcher(activating: nil)
+            guard let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) })
+                    ?? NSScreen.main,
+                  let panel = sidebars[Self.displayID(for: screen)] else { return }
+            let expanded = !panel.isShortcutExpanded
+            dismissSidebar()
+            panel.setShortcutExpanded(expanded)
+        case .dismissSidebar:
+            dismissSidebar()
         case let .begin(currentAppOnly, reverse):
+            dismissSidebar()
             searchQuery = ""
             selectionBeforeSearch = nil
             self.currentAppOnly = currentAppOnly
@@ -234,6 +251,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         selectedIndex = selectedID.flatMap { id in switchingResults.firstIndex(where: { $0.window.id == id }) }
             ?? min(selectedIndex, max(0, switchingResults.count - 1))
         updateSwitchers()
+    }
+
+    private func dismissSidebar() {
+        sidebars.values.filter { $0.isShortcutExpanded }.forEach { $0.setShortcutExpanded(false) }
     }
 
     private func selectSwitcherWindow(id: String) {

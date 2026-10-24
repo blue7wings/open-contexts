@@ -50,7 +50,6 @@
 "Press shortcut…" = "Appuyez sur le raccourci…";
 "Restore defaults" = "Valeurs par défaut";
 "Click a shortcut to record. Esc cancels; Shift switches backward." = "Cliquez pour enregistrer. Échap annule ; Maj inverse le sens.";
-"The two shortcuts must be different." = "Les deux raccourcis doivent être différents.";
 "Use Command, Option or Control with a key; Shift is reserved for reverse switching." = "Utilisez Commande, Option ou Contrôle avec une touche ; Maj est réservé au sens inverse.";
 "Type an app name or window title" = "Saisissez un nom d’app ou un titre de fenêtre";
 "Window search" = "Recherche de fenêtres";
@@ -62,3 +61,7 @@
 "Features" = "Fonctionnalités";
 "Shortcuts" = "Raccourcis";
 "Groups" = "Groupes";
+"Show or hide sidebar" = "Afficher ou masquer la barre latérale";
+"Disable" = "Désactiver";
+"Shortcuts must be different." = "Les raccourcis doivent être différents.";
+"Move the pointer into the sidebar and away, press its shortcut again or Esc to restore its visibility setting." = "Placez le pointeur dans la barre latérale puis retirez-le, ou appuyez à nouveau sur son raccourci ou sur Échap pour rétablir son mode d’affichage.";

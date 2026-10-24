@@ -50,7 +50,6 @@
 "Press shortcut…" = "请按快捷键…";
 "Restore defaults" = "恢复默认";
 "Click a shortcut to record. Esc cancels; Shift switches backward." = "点击快捷键开始录入，Esc 取消，Shift 反向切换。";
-"The two shortcuts must be different." = "两个快捷键不能相同。";
 "Use Command, Option or Control with a key; Shift is reserved for reverse switching." = "请使用 Command、Option 或 Control 搭配按键；Shift 用于反向切换。";
 "Type an app name or window title" = "输入应用名或窗口标题";
 "Window search" = "窗口搜索";
@@ -62,3 +61,7 @@
 "Features" = "功能";
 "Shortcuts" = "快捷键";
 "Groups" = "分组";
+"Show or hide sidebar" = "显示／隐藏侧边栏";
+"Disable" = "禁用";
+"Shortcuts must be different." = "快捷键不能相同。";
+"Move the pointer into the sidebar and away, press its shortcut again or Esc to restore its visibility setting." = "鼠标移入侧边栏后再移出可恢复原显示模式，也可再次按快捷键或 Esc。";

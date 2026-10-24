@@ -50,7 +50,6 @@
 "Press shortcut…" = "Pulsa el atajo…";
 "Restore defaults" = "Restaurar valores";
 "Click a shortcut to record. Esc cancels; Shift switches backward." = "Haz clic para grabar. Esc cancela; Mayús cambia hacia atrás.";
-"The two shortcuts must be different." = "Los dos atajos deben ser diferentes.";
 "Use Command, Option or Control with a key; Shift is reserved for reverse switching." = "Usa Comando, Opción o Control con una tecla; Mayús se reserva para cambiar hacia atrás.";
 "Type an app name or window title" = "Escribe un nombre de app o título de ventana";
 "Window search" = "Buscar ventanas";
@@ -62,3 +61,7 @@
 "Features" = "Funciones";
 "Shortcuts" = "Atajos";
 "Groups" = "Grupos";
+"Show or hide sidebar" = "Mostrar u ocultar la barra lateral";
+"Disable" = "Desactivar";
+"Shortcuts must be different." = "Los atajos deben ser diferentes.";
+"Move the pointer into the sidebar and away, press its shortcut again or Esc to restore its visibility setting." = "Mueve el puntero dentro y fuera de la barra lateral, o pulsa de nuevo su atajo o Esc para volver a su modo de visibilidad.";

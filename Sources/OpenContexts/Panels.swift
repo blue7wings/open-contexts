@@ -154,6 +154,20 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
+    var isShortcutExpanded: Bool { hoverState.isShortcutExpanded }
+    var canDismissShortcut: Bool { isShortcutExpanded && !contextMenuOpen && !dragging }
+
+    func setShortcutExpanded(_ expanded: Bool) {
+        hoverState.setShortcutExpanded(expanded)
+        layoutPanel()
+        if isShortcutExpanded {
+            startHoverPolling()
+        } else if !enabled {
+            hoverTimer?.invalidate()
+            hoverTimer = nil
+        }
+    }
+
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
         frameRect
     }
@@ -439,13 +453,17 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     }
 
     private func layoutPanel() {
-        guard enabled, hasVisibleContent else {
+        guard enabled || isShortcutExpanded, hasVisibleContent else {
             hoverState = SidebarHoverState()
+            if !enabled {
+                hoverTimer?.invalidate()
+                hoverTimer = nil
+            }
             if isVisible { orderOut(nil) }
             return
         }
         let frames = sidebarFrames()
-        let expanded = hoverState.isExpanded || dragging || (alwaysVisible && !fullscreen)
+        let expanded = hoverState.isExpanded || dragging || contextMenuOpen || (alwaysVisible && !fullscreen)
         let target = expanded ? frames.expanded : frames.edge
         if expanded {
             if !frame.approximatelyEquals(target) { setFrame(target, display: true) }
@@ -502,7 +520,7 @@ final class SidebarPanel: NSPanel, NSMenuDelegate {
     }
 
     private func updateHover(pointer: CGPoint, now: TimeInterval) {
-        guard enabled, hasVisibleContent else { return }
+        guard enabled || isShortcutExpanded, hasVisibleContent else { return }
         let frames = sidebarFrames()
         if hoverState.update(pointer: pointer, edgeFrame: frames.edge, expandedFrame: frames.expanded,
                              dragging: dragging, menuOpen: contextMenuOpen, now: now) {
@@ -1976,7 +1994,8 @@ enum PanelSmokeCheck {
                        showCreateGroup: false)
         var visibilityFrames = sidebar.smokeSidebarFrames
         sidebar.smokeUpdateHover(pointer: CGPoint(x: visibilityFrames.edge.midX, y: visibilityFrames.edge.midY), now: 0)
-        guard sidebar.smokeIsHidden, sidebar.smokeRowOrder.isEmpty else {
+        sidebar.setShortcutExpanded(true)
+        guard sidebar.smokeIsHidden, sidebar.smokeRowOrder.isEmpty, !sidebar.isShortcutExpanded else {
             sidebar.close()
             return fail("empty sidebar retained a visible or hoverable panel")
         }
@@ -1994,6 +2013,39 @@ enum PanelSmokeCheck {
             guard sidebar.smokeIsHidden else {
                 sidebar.close()
                 return fail("disabled sidebar reappeared on hover")
+            }
+            for mode in SidebarVisibilityMode.allCases {
+                for fullscreen in [false, true] {
+                    sidebar.update(groups: groups, windowsByGroup: [GroupStore.ungroupedID: [windows[0]]],
+                                   alwaysVisible: mode == .always, fullscreen: fullscreen,
+                                   enabled: mode != .hidden, position: position)
+                    sidebar.setShortcutExpanded(true)
+                    sidebar.smokeStopHoverPolling()
+                    let outside = CGPoint(x: screen.frame.maxX + 40, y: screen.frame.maxY + 40)
+                    sidebar.smokeUpdateHover(pointer: outside, now: 1)
+                    sidebar.smokeUpdateHover(pointer: outside, now: 5)
+                    guard sidebar.isShortcutExpanded, sidebar.canDismissShortcut, !sidebar.smokeIsHidden else {
+                        sidebar.close()
+                        return fail("shortcut sidebar did not stay visible: \(mode) \(position) \(fullscreen)")
+                    }
+                    sidebar.setShortcutExpanded(false)
+                    guard !sidebar.isShortcutExpanded,
+                          sidebar.isVisible == (mode == .always && !fullscreen) else {
+                        sidebar.close()
+                        return fail("shortcut sidebar did not restore its visibility setting")
+                    }
+                    sidebar.setShortcutExpanded(true)
+                    sidebar.smokeStopHoverPolling()
+                    let frames = sidebar.smokeSidebarFrames
+                    sidebar.smokeUpdateHover(pointer: CGPoint(x: frames.expanded.midX, y: frames.expanded.midY), now: 6)
+                    sidebar.smokeUpdateHover(pointer: outside, now: 7)
+                    sidebar.smokeUpdateHover(pointer: outside, now: 7.13)
+                    guard !sidebar.isShortcutExpanded,
+                          sidebar.isVisible == (mode == .always && !fullscreen) else {
+                        sidebar.close()
+                        return fail("shortcut sidebar did not restore visibility after pointer exit")
+                    }
+                }
             }
         }
         for position in [SidebarPosition.left, .right] {
