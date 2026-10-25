@@ -65,3 +65,10 @@
 "Disable" = "Disable";
 "Shortcuts must be different." = "Shortcuts must be different.";
 "Move the pointer into the sidebar and away, press its shortcut again or Esc to restore its visibility setting." = "Move the pointer into the sidebar and away, press its shortcut again or Esc to restore its visibility setting.";
+"Window switcher" = "Window switcher";
+"Show windows from all desktops" = "Show windows from all desktops";
+"The current desktop comes first in recent order. Other desktops stay grouped in a stable order." = "The current desktop comes first in recent order. Other desktops stay grouped in a stable order.";
+"Desktop %@" = "Desktop %@";
+"Full screen %@" = "Full screen %@";
+"Current" = "Current";
+"Current desktop" = "Current desktop";

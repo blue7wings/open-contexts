@@ -1262,15 +1262,17 @@ final class SwitcherPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 
     func show(results: [WindowSearch.Match], selectedIndex: Int, query: String = "",
+              groupBySpace: Bool = false,
               totalWindowCount: Int? = nil, language: AppLanguage = .system) {
         update(results: results, selectedIndex: selectedIndex, resetHover: true,
-               query: query, totalWindowCount: totalWindowCount, language: language)
+               groupBySpace: groupBySpace, query: query, totalWindowCount: totalWindowCount, language: language)
         orderFrontRegardless()
         layoutDocumentView()
         revealSelectedRow()
     }
 
     func update(results: [WindowSearch.Match], selectedIndex: Int, resetHover: Bool = false,
+                groupBySpace: Bool = false,
                 query: String = "", totalWindowCount: Int? = nil, language: AppLanguage = .system) {
         if resetHover {
             hoverOrigin = NSEvent.mouseLocation
@@ -1290,8 +1292,35 @@ final class SwitcherPanel: NSPanel {
         }
 
         var selectedRow: SwitcherRow?
+        var sectionCount = 0
+        var previousSpaceID: UInt64?
         for (index, match) in results.enumerated() {
             let window = match.window
+            if groupBySpace, index == 0 || previousSpaceID != window.space?.id {
+                let title: String
+                if let space = window.space {
+                    title = L10n.format(space.isFullscreen ? "Full screen %@" : "Desktop %@", String(space.index), language: language)
+                        + (space.isCurrent ? " · " + L10n.text("Current", language: language) : "")
+                } else {
+                    title = L10n.text("Current desktop", language: language)
+                }
+                let label = NSTextField(labelWithString: title)
+                label.font = .systemFont(ofSize: 12, weight: .semibold)
+                label.textColor = .secondaryLabelColor
+                label.setContentHuggingPriority(.required, for: .horizontal)
+                let line = NSBox()
+                line.boxType = .separator
+                let header = NSStackView(views: [label, line])
+                header.identifier = NSUserInterfaceItemIdentifier("space-header")
+                header.orientation = .horizontal
+                header.alignment = .centerY
+                header.spacing = 8
+                stack.addArrangedSubview(header)
+                header.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -16).isActive = true
+                header.heightAnchor.constraint(equalToConstant: 26).isActive = true
+                sectionCount += 1
+            }
+            previousSpaceID = window.space?.id
             let row = SwitcherRow(
                 match: match, selected: index == selectedIndex,
                 onPointerMove: { [weak self] pointer in
@@ -1307,7 +1336,7 @@ final class SwitcherPanel: NSPanel {
 
         let area = displayScreen.visibleFrame
         let width = max(320, min(600, area.width - 48))
-        let height = min(max(CGFloat(totalWindowCount ?? results.count) * 28 + 16, 100) + 40,
+        let height = min(max(CGFloat(totalWindowCount ?? results.count) * 28 + CGFloat(sectionCount) * 26 + 16, 100) + 40,
                          max(140, area.height - 80))
         setFrame(NSRect(x: area.midX - width / 2, y: area.midY - height / 2,
                         width: width, height: height), display: true)
@@ -1381,6 +1410,12 @@ final class SwitcherPanel: NSPanel {
 
     fileprivate var smokeSearchHighlightsAreValid: Bool {
         stack.arrangedSubviews.compactMap { $0 as? SwitcherRow }.allSatisfy { $0.smokeSearchHighlightsAreValid }
+    }
+
+    fileprivate var smokeSpaceHeaders: [String] {
+        stack.arrangedSubviews.filter { $0.identifier?.rawValue == "space-header" }.compactMap {
+            $0.subviews.compactMap { $0 as? NSTextField }.first?.stringValue
+        }
     }
 
     fileprivate var smokeTextLayouts: [[NSRect]] {
@@ -2626,6 +2661,40 @@ enum PanelSmokeCheck {
                 sidebar.close()
                 return fail("search changed long text layout: normal=\(normalTextLayouts) search=\(searchedLayouts)")
             }
+        }
+        let desktopWindows = [
+            WindowInfo(id: "current-space", appID: "Editor", appName: "Editor", title: "Project", processID: 0,
+                       space: WindowSpace(id: 2, index: 2, isCurrent: true)),
+            WindowInfo(id: "other-space", appID: "Browser", appName: "Browser", title: "Project", processID: 0,
+                       space: WindowSpace(id: 1, index: 1, isCurrent: false))
+        ]
+        let grouped = WindowSwitcher.filter(desktopWindows, query: "", allSpaces: true)
+        switcher.show(results: grouped, selectedIndex: 1, groupBySpace: true, language: .zh)
+        switcher.contentView?.layoutSubtreeIfNeeded()
+        guard switcher.smokeSpaceHeaders == ["桌面 2 · 当前", "桌面 1"],
+              switcher.smokeHighlightedIndices == [1] else {
+            switcher.close()
+            sidebar.close()
+            return fail("desktop headers or window selection indices mismatch")
+        }
+        switcher.smokeMove(to: 0, pointer: NSPoint(x: switcher.smokeHoverOrigin.x + 1, y: switcher.smokeHoverOrigin.y))
+        guard selectedIDs.last == "current-space" else {
+            switcher.close()
+            sidebar.close()
+            return fail("desktop header intercepted window hover selection")
+        }
+        switcher.update(results: WindowSwitcher.filter(desktopWindows, query: "browser", allSpaces: true),
+                        selectedIndex: 0, groupBySpace: true, query: "browser", language: .zh)
+        guard switcher.smokeSpaceHeaders == ["桌面 1"], switcher.smokeHighlightedIndices == [0] else {
+            switcher.close()
+            sidebar.close()
+            return fail("desktop search retained empty groups")
+        }
+        switcher.update(results: grouped, selectedIndex: 0, groupBySpace: false)
+        guard switcher.smokeSpaceHeaders.isEmpty else {
+            switcher.close()
+            sidebar.close()
+            return fail("desktop labels remained after disabling grouping")
         }
         switcher.hideSwitcher()
         switcher.close()

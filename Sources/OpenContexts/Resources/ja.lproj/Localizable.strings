@@ -65,3 +65,10 @@
 "Disable" = "無効にする";
 "Shortcuts must be different." = "ショートカットはそれぞれ異なる必要があります。";
 "Move the pointer into the sidebar and away, press its shortcut again or Esc to restore its visibility setting." = "ポインタをサイドバーに入れてから外すか、もう一度ショートカットまたは Esc を押すと、元の表示設定に戻ります。";
+"Window switcher" = "ウインドウ切替";
+"Show windows from all desktops" = "すべてのデスクトップのウインドウを表示";
+"The current desktop comes first in recent order. Other desktops stay grouped in a stable order." = "現在のデスクトップを最近使った順で先頭に表示します。他のデスクトップは固定の順序でグループ化します。";
+"Desktop %@" = "デスクトップ %@";
+"Full screen %@" = "フルスクリーン %@";
+"Current" = "現在";
+"Current desktop" = "現在のデスクトップ";

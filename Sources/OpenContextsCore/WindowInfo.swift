@@ -7,6 +7,8 @@ public struct WindowInfo: Identifiable, Equatable {
     public var title: String
     public var documentURL: String?
     public let processID: Int32
+    public var space: WindowSpace?
+    public var isOnCurrentSpace: Bool { space?.isCurrent ?? true }
 
     public var displayTitle: String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -14,12 +16,13 @@ public struct WindowInfo: Identifiable, Equatable {
     }
 
     public init(id: String, appID: String, appName: String, title: String,
-                documentURL: String? = nil, processID: Int32) {
+                documentURL: String? = nil, processID: Int32, space: WindowSpace? = nil) {
         self.id = id
         self.appID = appID
         self.appName = appName
         self.title = title
         self.documentURL = documentURL
         self.processID = processID
+        self.space = space
     }
 }

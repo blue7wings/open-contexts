@@ -36,6 +36,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         configureShortcuts()
         observeState()
         rebuildPanels()
+        windowService.setIncludeAllSpaces(settings.showWindowsFromAllDesktops)
         windowService.start()
         if !windowService.hasAccessibility { showSettings() }
     }
@@ -104,9 +105,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     self.shortcuts.configure(allWindows: self.settings.allWindowsShortcut,
                                              currentApp: self.settings.currentAppShortcut,
                                              sidebar: self.settings.sidebarShortcut)
+                    self.windowService.setIncludeAllSpaces(self.settings.showWindowsFromAllDesktops)
                     if self.settings.sidebarShortcut == nil { self.dismissSidebar() }
                     self.settingsWindow?.title = L10n.text("OpenContexts Settings", language: self.settings.language)
-                    if self.currentAppOnly != nil { self.updateSwitchers() }
+                    if self.currentAppOnly != nil { self.refreshVisibleSwitcher() }
                 }
             }
         }
@@ -152,6 +154,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if currentAppOnly != nil {
             switchers.values.forEach {
                 $0.show(results: switchingResults, selectedIndex: selectedIndex, query: searchQuery,
+                        groupBySpace: settings.showWindowsFromAllDesktops,
                         totalWindowCount: switchingWindowCount, language: settings.language)
             }
         }
@@ -159,7 +162,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func updateSidebars() {
         let windowsByGroup = Dictionary(uniqueKeysWithValues: groupStore.groups.map {
-            ($0.id, groupStore.windows(in: $0.id))
+            ($0.id, groupStore.windows(in: $0.id).filter(\.isOnCurrentSpace))
         })
         for (id, panel) in sidebars {
             panel.update(
@@ -182,12 +185,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func availableWindows(currentAppOnly: Bool, pid: pid_t? = nil) -> [WindowInfo] {
-        guard currentAppOnly else { return windowService.windows }
+        let windows = windowService.windows.filter { settings.showWindowsFromAllDesktops || $0.isOnCurrentSpace }
+        guard currentAppOnly else { return windows }
         let processID = pid ?? NSWorkspace.shared.frontmostApplication?.processIdentifier
-        return windowService.windows.filter { $0.processID == processID }
+        return windows.filter { $0.processID == processID }
     }
 
     private func handle(_ action: SwitcherAction) {
+        windowService.cancelActivation()
         switch action {
         case .toggleSidebar:
             finishSwitcher(activating: nil)
@@ -205,13 +210,16 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             selectionBeforeSearch = nil
             self.currentAppOnly = currentAppOnly
             currentAppPID = currentAppOnly ? NSWorkspace.shared.frontmostApplication?.processIdentifier : nil
-            switchingResults = WindowSearch.filter(availableWindows(currentAppOnly: currentAppOnly, pid: currentAppPID),
-                                                    query: "")
+            switchingResults = WindowSwitcher.filter(availableWindows(currentAppOnly: currentAppOnly, pid: currentAppPID),
+                                                     query: "", allSpaces: settings.showWindowsFromAllDesktops)
             switchingWindowCount = switchingResults.count
             guard !switchingResults.isEmpty else { return }
-            selectedIndex = reverse ? switchingResults.count - 1 : min(1, switchingResults.count - 1)
+            let firstIsFocused = switchingResults.first?.window.id == windowService.focusedWindowID
+            selectedIndex = reverse ? switchingResults.count - 1
+                : firstIsFocused ? min(1, switchingResults.count - 1) : 0
             switchers.values.forEach {
                 $0.show(results: switchingResults, selectedIndex: selectedIndex,
+                        groupBySpace: settings.showWindowsFromAllDesktops,
                         totalWindowCount: switchingWindowCount, language: settings.language)
             }
         case let .step(amount):
@@ -230,7 +238,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let windows = availableWindows(currentAppOnly: currentAppOnly, pid: currentAppPID)
             switchingWindowCount = windows.count
             guard !windows.isEmpty else { finishSwitcher(activating: nil); return }
-            switchingResults = WindowSearch.filter(windows, query: query)
+            switchingResults = WindowSwitcher.filter(windows, query: query, allSpaces: settings.showWindowsFromAllDesktops)
             selectedIndex = query.isEmpty
                 ? selectionBeforeSearch.flatMap { id in switchingResults.firstIndex { $0.window.id == id } } ?? 0
                 : 0
@@ -252,7 +260,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             finishSwitcher(activating: nil)
             return
         }
-        switchingResults = WindowSearch.filter(windows, query: searchQuery)
+        switchingResults = WindowSwitcher.filter(windows, query: searchQuery, allSpaces: settings.showWindowsFromAllDesktops)
         selectedIndex = selectedID.flatMap { id in switchingResults.firstIndex(where: { $0.window.id == id }) }
             ?? min(selectedIndex, max(0, switchingResults.count - 1))
         updateSwitchers()
@@ -273,6 +281,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func updateSwitchers(resetHover: Bool = false) {
         switchers.values.forEach {
             $0.update(results: switchingResults, selectedIndex: selectedIndex, resetHover: resetHover,
+                      groupBySpace: settings.showWindowsFromAllDesktops,
                       query: searchQuery, totalWindowCount: switchingWindowCount, language: settings.language)
         }
     }

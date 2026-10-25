@@ -65,3 +65,10 @@
 "Disable" = "Désactiver";
 "Shortcuts must be different." = "Les raccourcis doivent être différents.";
 "Move the pointer into the sidebar and away, press its shortcut again or Esc to restore its visibility setting." = "Placez le pointeur dans la barre latérale puis retirez-le, ou appuyez à nouveau sur son raccourci ou sur Échap pour rétablir son mode d’affichage.";
+"Window switcher" = "Sélecteur de fenêtres";
+"Show windows from all desktops" = "Afficher les fenêtres de tous les bureaux";
+"The current desktop comes first in recent order. Other desktops stay grouped in a stable order." = "Le bureau actuel apparaît en premier, par utilisation récente. Les autres bureaux restent groupés dans un ordre stable.";
+"Desktop %@" = "Bureau %@";
+"Full screen %@" = "Plein écran %@";
+"Current" = "Actuel";
+"Current desktop" = "Bureau actuel";

@@ -71,11 +71,13 @@ final class AppSettings: ObservableObject {
     @Published private(set) var allWindowsShortcut: KeyboardShortcut
     @Published private(set) var currentAppShortcut: KeyboardShortcut
     @Published private(set) var sidebarShortcut: KeyboardShortcut?
+    @Published private(set) var showWindowsFromAllDesktops: Bool
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        showWindowsFromAllDesktops = defaults.object(forKey: "showWindowsFromAllDesktops") as? Bool ?? false
         func loadShortcut(_ key: String, fallback: KeyboardShortcut) -> KeyboardShortcut {
             guard let data = defaults.data(forKey: key),
                   let shortcut = try? JSONDecoder().decode(KeyboardShortcut.self, from: data),
@@ -156,6 +158,11 @@ final class AppSettings: ObservableObject {
         defaults.set(language.rawValue, forKey: "language")
     }
 
+    func setShowWindowsFromAllDesktops(_ enabled: Bool) {
+        showWindowsFromAllDesktops = enabled
+        defaults.set(enabled, forKey: "showWindowsFromAllDesktops")
+    }
+
     @discardableResult
     func setShortcut(_ shortcut: KeyboardShortcut, target: ShortcutTarget) -> Bool {
         let others = ShortcutTarget.allCases.filter { $0 != target }.compactMap { self.shortcut(for: $0) }
@@ -200,6 +207,11 @@ final class AppSettings: ObservableObject {
         guard let defaults = UserDefaults(suiteName: suite) else { return false }
         defer { defaults.removePersistentDomain(forName: suite) }
         let initial = AppSettings(defaults: defaults)
+        guard !initial.showWindowsFromAllDesktops else { return false }
+        initial.setShowWindowsFromAllDesktops(true)
+        guard AppSettings(defaults: defaults).showWindowsFromAllDesktops else { return false }
+        initial.setShowWindowsFromAllDesktops(false)
+        guard !AppSettings(defaults: defaults).showWindowsFromAllDesktops else { return false }
         guard initial.sidebarMode == .always, initial.sidebarVerticalAlignment == .center,
               initial.showUngrouped, initial.showCreateGroup,
               initial.sidebarWidth == Self.defaultSidebarWidth else { return false }
@@ -373,6 +385,16 @@ struct SettingsView: View {
 
     private var generalSettings: some View {
         Group {
+            settingsRow("Window switcher") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(L10n.text("Show windows from all desktops", language: language), isOn: Binding(
+                        get: { settings.showWindowsFromAllDesktops }, set: settings.setShowWindowsFromAllDesktops
+                    ))
+                    Text(L10n.text("The current desktop comes first in recent order. Other desktops stay grouped in a stable order.", language: language))
+                        .foregroundStyle(.secondary)
+                }
+                .toggleStyle(.checkbox)
+            }
             settingsRow("Language") {
                 Picker(L10n.text("Language", language: language), selection: Binding(
                     get: { settings.language }, set: settings.setLanguage
