@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-25
+
+### Added
+
+- Optionally show windows from all desktops in the switcher, grouped by desktop with the current desktop first; recent use only affects windows on the current desktop.
+- Open the sidebar with `⌃⌘B`, customize or disable the shortcut in Settings, and dismiss it by moving the pointer into the sidebar and away.
+- Highlight the active window in the sidebar using the window switcher's blue background and white text.
+
+### Fixed
+
+- Keep the selected window active and frontmost after switching desktops, and cancel pending activation when you start another action.
+
+### 新增
+
+- 可在设置中开启“显示所有桌面的窗口”，切换器按桌面分组显示，当前桌面置顶，最近使用排序仅影响当前桌面的窗口。
+- 按 `⌃⌘B` 唤起侧边栏，支持在设置中修改或禁用快捷键，鼠标移入再移出即可收起。
+- 侧边栏高亮当前激活窗口，沿用窗口切换器的蓝底白字样式。
+
+### 修复
+
+- 跨桌面切换后正确激活并置前选中的窗口，开始其他操作时取消待执行的激活。
+
 ## [0.4.2] - 2026-10-16
 
 ### Fixed
