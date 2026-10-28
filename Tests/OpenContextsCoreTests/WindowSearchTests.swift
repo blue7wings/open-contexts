@@ -98,6 +98,8 @@ final class WindowSearchTests: XCTestCase {
         let windows = [window("pinyin", app: "微信", title: ""),
                        window("literal", app: "Weixin", title: "")]
         XCTAssertEqual(WindowSearch.filter(windows, query: "weixin").map(\.window.id), ["literal", "pinyin"])
+        XCTAssertEqual(WindowSearch.filter(windows, query: "weix").map(\.window.id), ["literal", "pinyin"])
+        XCTAssertEqual(WindowSearch.filter(windows.reversed(), query: "weix").map(\.window.id), ["literal", "pinyin"])
         XCTAssertNil(WindowSearch.match(window("3", app: "微信", title: ""), query: "eixin"))
         XCTAssertNil(WindowSearch.match(window("4", app: "微信", title: ""), query: "wx"))
         XCTAssertNil(WindowSearch.match(window("5", app: "微 信", title: ""), query: "weixin"))

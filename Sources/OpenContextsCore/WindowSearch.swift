@@ -66,12 +66,14 @@ public enum WindowSearch {
         for start in indices.indices where syllables[start].first.map({ token.hasPrefix(String($0)) }) == true {
             var remaining = Substring(token)
             var end = start
+            var endsMidSyllable = false
             while end < indices.count, !remaining.isEmpty {
                 let syllable = syllables[end]
                 if remaining.hasPrefix(syllable) {
                     remaining = remaining.dropFirst(syllable.count)
                 } else if syllable.hasPrefix(remaining) {
                     remaining = ""
+                    endsMidSyllable = true
                 } else {
                     break
                 }
@@ -80,7 +82,7 @@ public enum WindowSearch {
             guard remaining.isEmpty else { continue }
             let range = indices[start]..<(end < indices.count ? indices[end] : text.endIndex)
             // Pinyin matches rank just below the equivalent literal match.
-            let score = range == text.startIndex..<text.endIndex ? 950
+            let score = !endsMidSyllable && range == text.startIndex..<text.endIndex ? 950
                 : start == 0 ? 650
                 : isHan(text[indices[start]].unicodeScalars.first!) || !text[indices[start - 1]].isLetter ? 550 : 450
             return (score, [NSRange(range, in: text)])
